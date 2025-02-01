@@ -13,7 +13,7 @@ const buildVersion = process.env.BUILD_VERSION || 'development';
 console.log(`Starting IMDB API Server - Version: ${buildVersion}`);
 
 app.use(cors({
-  origin: ['http://34.100.186.170:3000', 'http://localhost:3000'],
+  origin: ['http://34.93.14.21:80','http://34.93.14.21:3000', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
