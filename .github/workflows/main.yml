@@ -232,7 +232,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          
+
       - name: Trivy Frontend Scan
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
@@ -305,7 +305,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          
+
       - name: Trivy Backend Scan
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
@@ -429,56 +429,35 @@ jobs:
         run: |
           if [ -f zap-baseline-report.html ]; then
             echo "ZAP scan completed - checking results"
-                      echo "ZAP scan completed - checking results"
-          if grep -q "FAIL-NEW: " zap-baseline-report.html; then
-            echo "New vulnerabilities detected!"
+            if grep -q "FAIL-NEW: " zap-baseline-report.html; then
+              echo "New vulnerabilities detected!"
+            fi
           fi
-        fi
 
-                  # Enhanced Nuclei scan
       - name: Run Nuclei Scan
         uses: projectdiscovery/nuclei-action@main
-      continue-on-error: true
-      with:
-        target: ${{ env.APP_DOMAIN }}
-        templates: "cves,vulnerabilities,exposures,misconfiguration"
-        severity: "critical,high,medium"
-        output: "nuclei-output.txt"
-        rate-limit: 150
-        bulk-size: 25
-        retry-on-failure: true
-
+        continue-on-error: true
+        with:
+          target: ${{ env.APP_DOMAIN }}
+          templates: "cves,vulnerabilities,exposures,misconfiguration"
+          severity: "critical,high,medium"
+          output: "nuclei-output.txt"
+          rate-limit: 150
+          bulk-size: 25
+          retry-on-failure: true
+   
     # Add automated vulnerability reporting
       - name: Generate Security Report
         if: always()
-      run: |
-        echo "# Security Scan Results" > security-report.md
-        if [ -f zap-baseline-report.html ]; then
-          echo "ZAP scan completed. See attached HTML report." >> security-report.md
-        fi
-        echo "## Nuclei Scan Results" >> security-report.md
-        if [ -f nuclei-output.txt ]; then
-          echo "\`\`\`" >> security-report.md
-          cat nuclei-output.txt >> security-report.md
-          echo "\`\`\`" >> security-report.md
-        fi
-
-    # Enhanced artifact upload
-      - name: Upload DAST Results
-        uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: dast-scan-results
-        path: |
-          zap-baseline-report.html
-          nuclei-output.txt
-          security-report.md
-        retention-days: 14
-
-    # Optional: Add notification for critical findings
-      - name: Notify on Critical Findings
-        if: always()
-      run: |
-        if grep -q "critical" nuclei-output.txt || grep -q "FAIL-NEW: " zap-baseline-report.html; then
-          echo "::warning ::Critical security issues found in DAST scan!"
-        fi
+        run: |
+         echo "# Security Scan Results" > security-report.md
+         if [ -f zap-baseline-report.html ]; then
+           echo "ZAP scan completed. See attached HTML report." >> security-report.md
+         fi
+         echo "## Nuclei Scan Results" >> security-report.md
+         if [ -f nuclei-output.txt ]; then
+           echo "\`\`\`" >> security-report.md
+           cat nuclei-output.txt >> security-report.md
+           echo "\`\`\`" >> security-report.md
+         fi
+ 
