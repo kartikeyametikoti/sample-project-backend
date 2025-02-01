@@ -247,7 +247,7 @@ app.use("/api/actors", actorRouter);
 app.use("/api/producers", producerRouter);
 
 // MongoDB Atlas connection with retry logic
-const MONGO_URI = process.env.MONGO_URI || "your_mongodb_uri_here";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://jayachandran:jc@3747@jai@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 const connectDB = async (retries = 5) => {
     while (retries) {
