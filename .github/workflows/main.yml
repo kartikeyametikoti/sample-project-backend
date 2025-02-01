@@ -917,6 +917,7 @@ jobs:
       - name: Deploy Services
         run: |
           cd backend
+          kubectl get pods,svc && kubectl delete deployment backend-deployment frontend-deployment && kubectl delete statefulset mongodb
           kubectl apply -f k8.yaml
           
           echo "Waiting for backend rollout..."
