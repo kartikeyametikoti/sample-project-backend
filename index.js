@@ -152,10 +152,9 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'healthy' });
 });
 
-// Routes
-app.use("/movies", movieRouter);
-app.use("/actors", actorRouter);
-app.use("/producers", producerRouter);
+app.use("/api/movies", movieRouter);
+app.use("/api/actors", actorRouter);
+app.use("/api/producers", producerRouter);
 
 // MongoDB Atlas connection with retry logic
 const MONGO_URI = "mongodb+srv://jayachandran:jc@3747@jai@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
