@@ -1036,7 +1036,7 @@ const producerRouter = require("./routes/producer");
 const app = express();
 const buildVersion = process.env.BUILD_VERSION || 'development';
 const PORT = process.env.PORT || 5000;
-const MONGO_URL = process.env.MONGO_URL || "mongodb+srv://jayachandran:jc%403747%40jai@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URL = process.env.MONGO_URL || "mongodb+srv://JAYACHANDRAN:KQJrxDn44181NsqT@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 // Initialize middleware
 app.use(cors({
