@@ -1135,5 +1135,5 @@ jobs:
           
       - name: Deploy to K8s
         run: |
-          sed -i 's|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|' k8s.yaml
-          kubectl apply -f k8s.yaml --validate=true
+          sed -i 's|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|' k8.yaml
+          kubectl apply -f k8.yaml --validate=true
