@@ -1,5 +1,345 @@
-# # name: Security & Build Pipeline
+# # # name: Security & Build Pipeline
 
+
+# # # on:
+# # #   push:
+# # #     branches: [ main ]
+# # #   pull_request:
+# # #     branches: [ main ]
+
+# # # env:
+# # #   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+# # #   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+# # #   MONGO_URL: ${{ secrets.MONGO_URL }}
+# # #   SEMGREP_TOKEN: ${{ secrets.SEMGREP_TOKEN }}
+# # #   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+# # #   GH_PAT: ${{ secrets.GH_PAT }}
+
+# # # jobs:
+# # #   # Frontend Security Scans
+# # #   frontend-trufflehog:
+# # #     name: Frontend TruffleHog
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-frontend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: TruffleHog Scan
+# # #         uses: trufflesecurity/trufflehog@main
+# # #         continue-on-error: true
+# # #         with:
+# # #           path: .
+# # #           base: ${{ github.event.before }}
+# # #           head: ${{ github.sha }}
+
+# # #   frontend-semgrep:
+# # #     name: Frontend Semgrep
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-frontend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: SAST Scan
+# # #         uses: semgrep/semgrep-action@v1
+# # #         continue-on-error: true
+# # #         with:
+# # #           config: p/javascript
+
+# # #   frontend-snyk:
+# # #     name: Frontend Snyk
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-frontend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: Snyk Scan
+# # #         uses: snyk/actions/node@master
+# # #         continue-on-error: true
+# # #         env:
+# # #           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+# # #   frontend-checkov:
+# # #     name: Frontend IaC Scan
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-frontend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: Checkov Scan
+# # #         uses: bridgecrewio/checkov-action@master
+# # #         continue-on-error: true
+# # #         with:
+# # #           directory: .
+# # #           framework: dockerfile,kubernetes,secrets
+
+# # #   # Backend Security Scans
+# # #   backend-trufflehog:
+# # #     name: Backend TruffleHog
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-backend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: TruffleHog Scan
+# # #         uses: trufflesecurity/trufflehog@main
+# # #         continue-on-error: true
+# # #         with:
+# # #           path: .
+# # #           base: ${{ github.event.before }}
+# # #           head: ${{ github.sha }}
+
+# # #   backend-semgrep:
+# # #     name: Backend Semgrep
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-backend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: SAST Scan
+# # #         uses: semgrep/semgrep-action@v1
+# # #         continue-on-error: true
+# # #         with:
+# # #           config: p/javascript
+
+# # #   backend-snyk:
+# # #     name: Backend Snyk
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-backend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: Snyk Scan
+# # #         uses: snyk/actions/node@master
+# # #         continue-on-error: true
+# # #         env:
+# # #           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+# # #   backend-checkov:
+# # #     name: Backend IaC Scan
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-backend
+# # #           token: ${{ secrets.GH_PAT }}
+# # #       - name: Checkov Scan
+# # #         uses: bridgecrewio/checkov-action@master
+# # #         continue-on-error: true
+# # #         with:
+# # #           directory: .
+# # #           framework: dockerfile,kubernetes,secrets
+
+# # #   # Frontend Docker Build and Scan
+# # #   frontend-build:
+# # #     needs: [frontend-trufflehog, frontend-semgrep, frontend-snyk, frontend-checkov]
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout Frontend
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-frontend
+# # #           token: ${{ secrets.GH_PAT }}
+
+# # #       - name: Login to DockerHub
+# # #         uses: docker/login-action@v2
+# # #         with:
+# # #           username: ${{ secrets.DOCKER_USERNAME }}
+# # #           password: ${{ secrets.DOCKER_PASSWORD }}
+
+# # #       - name: Set up Docker Buildx
+# # #         uses: docker/setup-buildx-action@v2
+
+# # #       - name: Build Frontend Image
+# # #         uses: docker/build-push-action@v4
+# # #         with:
+# # #           context: .
+# # #           push: false
+# # #           load: true
+# # #           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
+# # #           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
+# # #           cache-to: type=inline
+# # #           build-args: |
+# # #             NODE_ENV=production
+
+# # #       - name: Trivy Frontend Scan
+# # #         uses: aquasecurity/trivy-action@master
+# # #         continue-on-error: true
+# # #         with:
+# # #           image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}'
+# # #           format: 'table'
+# # #           exit-code: '1'
+# # #           ignore-unfixed: true
+# # #           severity: 'CRITICAL,HIGH'
+
+# # #       - name: Push Frontend Image
+# # #         uses: docker/build-push-action@v4
+# # #         with:
+# # #           context: .
+# # #           push: true
+# # #           tags: |
+# # #             ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
+# # #             ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
+
+# # #   # Backend Docker Build and Scan
+# # #   backend-build:
+# # #     needs: [backend-trufflehog, backend-semgrep, backend-snyk, backend-checkov]
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout Backend
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-backend
+# # #           token: ${{ secrets.GH_PAT }}
+
+# # #       - name: Login to DockerHub
+# # #         uses: docker/login-action@v2
+# # #         with:
+# # #           username: ${{ secrets.DOCKER_USERNAME }}
+# # #           password: ${{ secrets.DOCKER_PASSWORD }}
+
+# # #       - name: Set up Docker Buildx
+# # #         uses: docker/setup-buildx-action@v2
+
+# # #       - name: Build Backend Image
+# # #         uses: docker/build-push-action@v4
+# # #         with:
+# # #           context: .
+# # #           push: false
+# # #           load: true
+# # #           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
+# # #           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
+# # #           cache-to: type=inline
+# # #           build-args: |
+# # #             NODE_ENV=production
+
+# # #       - name: Trivy Backend Scan
+# # #         uses: aquasecurity/trivy-action@master
+# # #         continue-on-error: true
+# # #         with:
+# # #           image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}'
+# # #           format: 'table'
+# # #           exit-code: '1'
+# # #           ignore-unfixed: true
+# # #           severity: 'CRITICAL,HIGH'
+
+# # #       - name: Push Backend Image
+# # #         uses: docker/build-push-action@v4
+# # #         with:
+# # #           context: .
+# # #           push: true
+# # #           tags: |
+# # #             ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
+# # #             ${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
+
+# # #   # Deploy to Kubernetes
+# # #   deploy:
+# # #     needs: [frontend-build, backend-build]
+# # #     runs-on: ubuntu-latest
+# # #     steps:
+# # #       - name: Checkout Backend Code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-backend
+# # #           token: ${{ secrets.GH_PAT }}
+
+# # #       - name: Google Auth
+# # #         id: auth
+# # #         uses: google-github-actions/auth@v1
+# # #         with:
+# # #           credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+# # #       - name: Set up Cloud SDK
+# # #         uses: google-github-actions/setup-gcloud@v1
+
+# # #       - name: Install gke-gcloud-auth-plugin
+# # #         run: |
+# # #           gcloud components install gke-gcloud-auth-plugin
+
+# # #       - name: Get GKE Credentials
+# # #         run: |
+# # #           gcloud container clusters get-credentials cluster-1 --zone asia-south1-a --project ${{ secrets.GCP_PROJECT_ID }}
+
+# # #       - name: Deploy Backend to K8s
+# # #         run: |
+# # #           # Update image in deployment
+# # #           sed -i 's|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|' k8.yaml
+          
+# # #           # Apply backend deployment with rolling update strategy
+# # #           kubectl apply -f k8.yaml --validate=true
+          
+# # #           # Wait for deployment rollout
+# # #           kubectl rollout status deployment/imdb-backend -n default
+          
+# # #           # Check deployment status
+# # #           kubectl get deployment,pod,svc -n default
+          
+# # #           # Check logs of the newest pod
+# # #           POD_NAME=$(kubectl get pods -n default -l app=imdb-backend -o jsonpath="{.items[0].metadata.name}")
+# # #           kubectl logs $POD_NAME -n default --tail=50
+
+# # #       - name: Checkout Frontend Code
+# # #         uses: actions/checkout@v3
+# # #         with:
+# # #           repository: jai3747/imdb-clone-frontend
+# # #           token: ${{ secrets.GH_PAT }}
+
+# # #       - name: Deploy Frontend to K8s
+# # #         run: |
+# # #           # Update image in deployment
+# # #           sed -i 's|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}|' k8.yaml
+          
+# # #           # Apply frontend deployment with rolling update strategy
+# # #           kubectl apply -f k8.yaml --validate=true
+          
+# # #           # Wait for deployment rollout
+# # #           kubectl rollout status deployment/imdb-frontend -n default
+          
+# # #           # Check deployment status
+# # #           kubectl get deployment,pod,svc -n default
+          
+# # #           # Check logs of the newest pod
+# # #           POD_NAME=$(kubectl get pods -n default -l app=imdb-frontend -o jsonpath="{.items[0].metadata.name}")
+# # #           kubectl logs $POD_NAME -n default --tail=50
+
+# # #       - name: Verify Deployment
+# # #         run: |
+# # #           # Get all resources
+# # #           echo "Checking all deployments..."
+# # #           kubectl get deployments -n default
+          
+# # #           echo "Checking all services..."
+# # #           kubectl get services -n default
+          
+# # #           echo "Checking all pods..."
+# # #           kubectl get pods -n default
+          
+# # #           echo "Checking events..."
+# # #           kubectl get events -n default --sort-by='.lastTimestamp'
+          
+# # #           # Check endpoints
+# # #           echo "Checking endpoints..."
+# # #           kubectl get endpoints -n default
+# # # #           done
+          
+# # # #           # Show final state
+# # # #           echo "Final State:"
+# # # #           kubectl get all
+# # name: Security & Build Pipeline
 
 # # on:
 # #   push:
@@ -14,146 +354,127 @@
 # #   SEMGREP_TOKEN: ${{ secrets.SEMGREP_TOKEN }}
 # #   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 # #   GH_PAT: ${{ secrets.GH_PAT }}
+# #   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+# #   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 # # jobs:
-# #   # Frontend Security Scans
-# #   frontend-trufflehog:
-# #     name: Frontend TruffleHog
+# #   security-checks:
+# #     name: Security Checks
 # #     runs-on: ubuntu-latest
+# #     strategy:
+# #       matrix:
+# #         repo: ['frontend', 'backend']
 # #     steps:
 # #       - name: Checkout code
 # #         uses: actions/checkout@v3
 # #         with:
-# #           repository: jai3747/imdb-clone-frontend
+# #           repository: jai3747/imdb-clone-${{ matrix.repo }}
 # #           token: ${{ secrets.GH_PAT }}
-# #       - name: TruffleHog Scan
+# #           fetch-depth: 0
+
+# #       - name: TruffleHog Secrets Scan
 # #         uses: trufflesecurity/trufflehog@main
-# #         continue-on-error: true
 # #         with:
 # #           path: .
 # #           base: ${{ github.event.before }}
 # #           head: ${{ github.sha }}
+# #           extra_args: --debug --only-verified
 
-# #   frontend-semgrep:
-# #     name: Frontend Semgrep
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-frontend
-# #           token: ${{ secrets.GH_PAT }}
-# #       - name: SAST Scan
+# #       - name: SAST with Semgrep
 # #         uses: semgrep/semgrep-action@v1
-# #         continue-on-error: true
 # #         with:
-# #           config: p/javascript
+# #           config: >-
+# #             p/javascript
+# #             p/nodejs
+# #             p/react
+# #             p/docker
+# #             p/kubernetes
+# #           output: semgrep-results.sarif
+# #           metrics: false
+          
+# #       - name: Upload Semgrep Results
+# #         uses: github/codeql-action/upload-sarif@v2
+# #         if: always()
+# #         with:
+# #           sarif_file: semgrep-results.sarif
 
-# #   frontend-snyk:
-# #     name: Frontend Snyk
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-frontend
-# #           token: ${{ secrets.GH_PAT }}
-# #       - name: Snyk Scan
+# #       - name: Dependency Scan with Snyk
 # #         uses: snyk/actions/node@master
-# #         continue-on-error: true
 # #         env:
 # #           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-# #   frontend-checkov:
-# #     name: Frontend IaC Scan
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v3
 # #         with:
-# #           repository: jai3747/imdb-clone-frontend
-# #           token: ${{ secrets.GH_PAT }}
-# #       - name: Checkov Scan
+# #           args: --severity-threshold=high --sarif-file-output=snyk.sarif
+
+# #       - name: Upload Snyk Results
+# #         uses: github/codeql-action/upload-sarif@v2
+# #         if: always()
+# #         with:
+# #           sarif_file: snyk.sarif
+
+# #       - name: IaC Scan with Checkov
 # #         uses: bridgecrewio/checkov-action@master
-# #         continue-on-error: true
 # #         with:
 # #           directory: .
 # #           framework: dockerfile,kubernetes,secrets
+# #           output_format: sarif
+# #           output_file: checkov-results.sarif
+          
+# #       - name: Upload Checkov Results
+# #         uses: github/codeql-action/upload-sarif@v2
+# #         if: always()
+# #         with:
+# #           sarif_file: checkov-results.sarif
 
-# #   # Backend Security Scans
-# #   backend-trufflehog:
-# #     name: Backend TruffleHog
+# #   build-and-test:
+# #     needs: security-checks
+# #     name: Build and Test
 # #     runs-on: ubuntu-latest
+# #     strategy:
+# #       matrix:
+# #         repo: ['frontend', 'backend']
 # #     steps:
 # #       - name: Checkout code
 # #         uses: actions/checkout@v3
 # #         with:
-# #           repository: jai3747/imdb-clone-backend
+# #           repository: jai3747/imdb-clone-${{ matrix.repo }}
 # #           token: ${{ secrets.GH_PAT }}
-# #       - name: TruffleHog Scan
-# #         uses: trufflesecurity/trufflehog@main
-# #         continue-on-error: true
-# #         with:
-# #           path: .
-# #           base: ${{ github.event.before }}
-# #           head: ${{ github.sha }}
 
-# #   backend-semgrep:
-# #     name: Backend Semgrep
+# #       - name: Setup Node.js
+# #         uses: actions/setup-node@v3
+# #         with:
+# #           node-version: '18'
+# #           cache: 'npm'
+
+# #       - name: Install dependencies
+# #         run: npm ci
+
+# #       - name: Run tests
+# #         run: npm test
+# #         continue-on-error: false
+
+# #       - name: Run linting
+# #         run: npm run lint
+# #         continue-on-error: false
+
+# #   docker-build:
+# #     needs: build-and-test
+# #     name: Docker Build and Scan
 # #     runs-on: ubuntu-latest
+# #     strategy:
+# #       matrix:
+# #         repo: ['frontend', 'backend']
 # #     steps:
 # #       - name: Checkout code
 # #         uses: actions/checkout@v3
 # #         with:
-# #           repository: jai3747/imdb-clone-backend
+# #           repository: jai3747/imdb-clone-${{ matrix.repo }}
 # #           token: ${{ secrets.GH_PAT }}
-# #       - name: SAST Scan
-# #         uses: semgrep/semgrep-action@v1
-# #         continue-on-error: true
-# #         with:
-# #           config: p/javascript
 
-# #   backend-snyk:
-# #     name: Backend Snyk
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-backend
-# #           token: ${{ secrets.GH_PAT }}
-# #       - name: Snyk Scan
-# #         uses: snyk/actions/node@master
-# #         continue-on-error: true
-# #         env:
-# #           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+# #       - name: Set up QEMU
+# #         uses: docker/setup-qemu-action@v2
 
-# #   backend-checkov:
-# #     name: Backend IaC Scan
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout code
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-backend
-# #           token: ${{ secrets.GH_PAT }}
-# #       - name: Checkov Scan
-# #         uses: bridgecrewio/checkov-action@master
-# #         continue-on-error: true
-# #         with:
-# #           directory: .
-# #           framework: dockerfile,kubernetes,secrets
-
-# #   # Frontend Docker Build and Scan
-# #   frontend-build:
-# #     needs: [frontend-trufflehog, frontend-semgrep, frontend-snyk, frontend-checkov]
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout Frontend
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-frontend
-# #           token: ${{ secrets.GH_PAT }}
+# #       - name: Set up Docker Buildx
+# #         uses: docker/setup-buildx-action@v2
 
 # #       - name: Login to DockerHub
 # #         uses: docker/login-action@v2
@@ -161,101 +482,62 @@
 # #           username: ${{ secrets.DOCKER_USERNAME }}
 # #           password: ${{ secrets.DOCKER_PASSWORD }}
 
-# #       - name: Set up Docker Buildx
-# #         uses: docker/setup-buildx-action@v2
+# #       - name: Generate Docker metadata
+# #         id: meta
+# #         uses: docker/metadata-action@v4
+# #         with:
+# #           images: ${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}
+# #           tags: |
+# #             type=sha,format=long
+# #             type=ref,event=branch
+# #             type=ref,event=tag
 
-# #       - name: Build Frontend Image
+# #       - name: Build for vulnerability scanning
 # #         uses: docker/build-push-action@v4
 # #         with:
 # #           context: .
-# #           push: false
 # #           load: true
-# #           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
-# #           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
-# #           cache-to: type=inline
-# #           build-args: |
-# #             NODE_ENV=production
+# #           tags: ${{ steps.meta.outputs.tags }}
+# #           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}:buildcache
+# #           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}:buildcache,mode=max
 
-# #       - name: Trivy Frontend Scan
+# #       - name: Run Trivy vulnerability scanner
 # #         uses: aquasecurity/trivy-action@master
-# #         continue-on-error: true
 # #         with:
-# #           image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}'
-# #           format: 'table'
-# #           exit-code: '1'
-# #           ignore-unfixed: true
+# #           image-ref: ${{ steps.meta.outputs.tags }}
+# #           format: 'sarif'
+# #           output: 'trivy-results.sarif'
 # #           severity: 'CRITICAL,HIGH'
+          
+# #       - name: Upload Trivy Results
+# #         uses: github/codeql-action/upload-sarif@v2
+# #         if: always()
+# #         with:
+# #           sarif_file: trivy-results.sarif
 
-# #       - name: Push Frontend Image
+# #       - name: Build and push final image
 # #         uses: docker/build-push-action@v4
 # #         with:
 # #           context: .
 # #           push: true
-# #           tags: |
-# #             ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
-# #             ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
+# #           tags: ${{ steps.meta.outputs.tags }}
+# #           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}:buildcache
 
-# #   # Backend Docker Build and Scan
-# #   backend-build:
-# #     needs: [backend-trufflehog, backend-semgrep, backend-snyk, backend-checkov]
-# #     runs-on: ubuntu-latest
-# #     steps:
-# #       - name: Checkout Backend
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-backend
-# #           token: ${{ secrets.GH_PAT }}
-
-# #       - name: Login to DockerHub
-# #         uses: docker/login-action@v2
-# #         with:
-# #           username: ${{ secrets.DOCKER_USERNAME }}
-# #           password: ${{ secrets.DOCKER_PASSWORD }}
-
-# #       - name: Set up Docker Buildx
-# #         uses: docker/setup-buildx-action@v2
-
-# #       - name: Build Backend Image
-# #         uses: docker/build-push-action@v4
-# #         with:
-# #           context: .
-# #           push: false
-# #           load: true
-# #           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
-# #           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
-# #           cache-to: type=inline
-# #           build-args: |
-# #             NODE_ENV=production
-
-# #       - name: Trivy Backend Scan
-# #         uses: aquasecurity/trivy-action@master
-# #         continue-on-error: true
-# #         with:
-# #           image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}'
-# #           format: 'table'
-# #           exit-code: '1'
-# #           ignore-unfixed: true
-# #           severity: 'CRITICAL,HIGH'
-
-# #       - name: Push Backend Image
-# #         uses: docker/build-push-action@v4
-# #         with:
-# #           context: .
-# #           push: true
-# #           tags: |
-# #             ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
-# #             ${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
-
-# #   # Deploy to Kubernetes
 # #   deploy:
-# #     needs: [frontend-build, backend-build]
+# #     needs: docker-build
+# #     name: Deploy to Kubernetes
 # #     runs-on: ubuntu-latest
+# #     environment:
+# #       name: production
 # #     steps:
-# #       - name: Checkout Backend Code
+# #       - name: Checkout Infrastructure Code
 # #         uses: actions/checkout@v3
 # #         with:
 # #           repository: jai3747/imdb-clone-backend
 # #           token: ${{ secrets.GH_PAT }}
+
+# #       - name: Setup Kustomize
+# #         uses: imranismail/setup-kustomize@v2
 
 # #       - name: Google Auth
 # #         id: auth
@@ -266,79 +548,71 @@
 # #       - name: Set up Cloud SDK
 # #         uses: google-github-actions/setup-gcloud@v1
 
-# #       - name: Install gke-gcloud-auth-plugin
+# #       - name: Install GKE auth plugin
 # #         run: |
 # #           gcloud components install gke-gcloud-auth-plugin
+# #           gcloud components update
 
 # #       - name: Get GKE Credentials
 # #         run: |
-# #           gcloud container clusters get-credentials cluster-1 --zone asia-south1-a --project ${{ secrets.GCP_PROJECT_ID }}
+# #           gcloud container clusters get-credentials cluster-1 \
+# #             --zone asia-south1-a \
+# #             --project ${{ secrets.GCP_PROJECT_ID }}
 
-# #       - name: Deploy Backend to K8s
+# #       - name: Create MongoDB Secret
 # #         run: |
-# #           # Update image in deployment
-# #           sed -i 's|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|' k8.yaml
+# #           kubectl create secret generic mongodb-secret \
+# #             --from-literal=MONGO_URL=${{ secrets.MONGO_URL }} \
+# #             --dry-run=client -o yaml | kubectl apply -f -
+
+# #       - name: Deploy Frontend
+# #         run: |
+# #           # Update image tag
+# #           sed -i 's|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend@${{ github.sha }}|' k8.yaml
           
-# #           # Apply backend deployment with rolling update strategy
+# #           # Apply with validation
 # #           kubectl apply -f k8.yaml --validate=true
           
-# #           # Wait for deployment rollout
-# #           kubectl rollout status deployment/imdb-backend -n default
+# #           # Wait for rollout
+# #           kubectl rollout status deployment/frontend-deployment -n default --timeout=5m
           
-# #           # Check deployment status
-# #           kubectl get deployment,pod,svc -n default
-          
-# #           # Check logs of the newest pod
-# #           POD_NAME=$(kubectl get pods -n default -l app=imdb-backend -o jsonpath="{.items[0].metadata.name}")
-# #           kubectl logs $POD_NAME -n default --tail=50
+# #           # Verify deployment
+# #           kubectl get deployment frontend-deployment -o wide
 
-# #       - name: Checkout Frontend Code
-# #         uses: actions/checkout@v3
-# #         with:
-# #           repository: jai3747/imdb-clone-frontend
-# #           token: ${{ secrets.GH_PAT }}
-
-# #       - name: Deploy Frontend to K8s
+# #       - name: Deploy Backend
 # #         run: |
-# #           # Update image in deployment
-# #           sed -i 's|image:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}|' k8.yaml
+# #           # Update image tag
+# #           sed -i 's|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend@${{ github.sha }}|' k8.yaml
           
-# #           # Apply frontend deployment with rolling update strategy
+# #           # Apply with validation
 # #           kubectl apply -f k8.yaml --validate=true
           
-# #           # Wait for deployment rollout
-# #           kubectl rollout status deployment/imdb-frontend -n default
+# #           # Wait for rollout
+# #           kubectl rollout status deployment/backend-deployment -n default --timeout=5m
           
-# #           # Check deployment status
-# #           kubectl get deployment,pod,svc -n default
-          
-# #           # Check logs of the newest pod
-# #           POD_NAME=$(kubectl get pods -n default -l app=imdb-frontend -o jsonpath="{.items[0].metadata.name}")
-# #           kubectl logs $POD_NAME -n default --tail=50
+# #           # Verify deployment
+# #           kubectl get deployment backend-deployment -o wide
 
-# #       - name: Verify Deployment
+# #       - name: Post-deployment Checks
 # #         run: |
-# #           # Get all resources
-# #           echo "Checking all deployments..."
-# #           kubectl get deployments -n default
+# #           # Wait for services to be ready
+# #           kubectl wait --for=condition=available --timeout=300s deployment/frontend-deployment
+# #           kubectl wait --for=condition=available --timeout=300s deployment/backend-deployment
           
-# #           echo "Checking all services..."
-# #           kubectl get services -n default
+# #           # Get service endpoints
+# #           echo "Frontend Service:"
+# #           kubectl get service frontend-service
+# #           echo "Backend Service:"
+# #           kubectl get service backend-service
           
-# #           echo "Checking all pods..."
-# #           kubectl get pods -n default
+# #           # Check pod health
+# #           echo "Pod Status:"
+# #           kubectl get pods -l app=frontend
+# #           kubectl get pods -l app=backend
           
-# #           echo "Checking events..."
-# #           kubectl get events -n default --sort-by='.lastTimestamp'
-          
-# #           # Check endpoints
-# #           echo "Checking endpoints..."
-# #           kubectl get endpoints -n default
-# # #           done
-          
-# # #           # Show final state
-# # #           echo "Final State:"
-# # #           kubectl get all
+# #           # Check recent events
+# #           echo "Recent Events:"
+# #           kubectl get events --sort-by='.lastTimestamp' | tail -n 10
 # name: Security & Build Pipeline
 
 # on:
@@ -354,127 +628,146 @@
 #   SEMGREP_TOKEN: ${{ secrets.SEMGREP_TOKEN }}
 #   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 #   GH_PAT: ${{ secrets.GH_PAT }}
-#   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-#   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 # jobs:
-#   security-checks:
-#     name: Security Checks
+#   # Frontend Security Scans
+#   frontend-trufflehog:
+#     name: Frontend TruffleHog
 #     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         repo: ['frontend', 'backend']
 #     steps:
 #       - name: Checkout code
 #         uses: actions/checkout@v3
 #         with:
-#           repository: jai3747/imdb-clone-${{ matrix.repo }}
+#           repository: jai3747/imdb-clone-frontend
 #           token: ${{ secrets.GH_PAT }}
-#           fetch-depth: 0
-
-#       - name: TruffleHog Secrets Scan
+#       - name: TruffleHog Scan
 #         uses: trufflesecurity/trufflehog@main
+#         continue-on-error: true
 #         with:
 #           path: .
 #           base: ${{ github.event.before }}
 #           head: ${{ github.sha }}
-#           extra_args: --debug --only-verified
 
-#       - name: SAST with Semgrep
+#   frontend-semgrep:
+#     name: Frontend Semgrep
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+#         with:
+#           repository: jai3747/imdb-clone-frontend
+#           token: ${{ secrets.GH_PAT }}
+#       - name: SAST Scan
 #         uses: semgrep/semgrep-action@v1
+#         continue-on-error: true
 #         with:
-#           config: >-
-#             p/javascript
-#             p/nodejs
-#             p/react
-#             p/docker
-#             p/kubernetes
-#           output: semgrep-results.sarif
-#           metrics: false
-          
-#       - name: Upload Semgrep Results
-#         uses: github/codeql-action/upload-sarif@v2
-#         if: always()
-#         with:
-#           sarif_file: semgrep-results.sarif
+#           config: p/javascript
 
-#       - name: Dependency Scan with Snyk
+#   frontend-snyk:
+#     name: Frontend Snyk
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+#         with:
+#           repository: jai3747/imdb-clone-frontend
+#           token: ${{ secrets.GH_PAT }}
+#       - name: Snyk Scan
 #         uses: snyk/actions/node@master
+#         continue-on-error: true
 #         env:
 #           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-#         with:
-#           args: --severity-threshold=high --sarif-file-output=snyk.sarif
 
-#       - name: Upload Snyk Results
-#         uses: github/codeql-action/upload-sarif@v2
-#         if: always()
+#   frontend-checkov:
+#     name: Frontend IaC Scan
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
 #         with:
-#           sarif_file: snyk.sarif
-
-#       - name: IaC Scan with Checkov
+#           repository: jai3747/imdb-clone-frontend
+#           token: ${{ secrets.GH_PAT }}
+#       - name: Checkov Scan
 #         uses: bridgecrewio/checkov-action@master
+#         continue-on-error: true
 #         with:
 #           directory: .
 #           framework: dockerfile,kubernetes,secrets
-#           output_format: sarif
-#           output_file: checkov-results.sarif
-          
-#       - name: Upload Checkov Results
-#         uses: github/codeql-action/upload-sarif@v2
-#         if: always()
-#         with:
-#           sarif_file: checkov-results.sarif
 
-#   build-and-test:
-#     needs: security-checks
-#     name: Build and Test
+#   # Backend Security Scans
+#   backend-trufflehog:
+#     name: Backend TruffleHog
 #     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         repo: ['frontend', 'backend']
 #     steps:
 #       - name: Checkout code
 #         uses: actions/checkout@v3
 #         with:
-#           repository: jai3747/imdb-clone-${{ matrix.repo }}
+#           repository: jai3747/imdb-clone-backend
 #           token: ${{ secrets.GH_PAT }}
-
-#       - name: Setup Node.js
-#         uses: actions/setup-node@v3
+#       - name: TruffleHog Scan
+#         uses: trufflesecurity/trufflehog@main
+#         continue-on-error: true
 #         with:
-#           node-version: '18'
-#           cache: 'npm'
+#           path: .
+#           base: ${{ github.event.before }}
+#           head: ${{ github.sha }}
 
-#       - name: Install dependencies
-#         run: npm ci
-
-#       - name: Run tests
-#         run: npm test
-#         continue-on-error: false
-
-#       - name: Run linting
-#         run: npm run lint
-#         continue-on-error: false
-
-#   docker-build:
-#     needs: build-and-test
-#     name: Docker Build and Scan
+#   backend-semgrep:
+#     name: Backend Semgrep
 #     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         repo: ['frontend', 'backend']
 #     steps:
 #       - name: Checkout code
 #         uses: actions/checkout@v3
 #         with:
-#           repository: jai3747/imdb-clone-${{ matrix.repo }}
+#           repository: jai3747/imdb-clone-backend
 #           token: ${{ secrets.GH_PAT }}
+#       - name: SAST Scan
+#         uses: semgrep/semgrep-action@v1
+#         continue-on-error: true
+#         with:
+#           config: p/javascript
 
-#       - name: Set up QEMU
-#         uses: docker/setup-qemu-action@v2
+#   backend-snyk:
+#     name: Backend Snyk
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+#         with:
+#           repository: jai3747/imdb-clone-backend
+#           token: ${{ secrets.GH_PAT }}
+#       - name: Snyk Scan
+#         uses: snyk/actions/node@master
+#         continue-on-error: true
+#         env:
+#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-#       - name: Set up Docker Buildx
-#         uses: docker/setup-buildx-action@v2
+#   backend-checkov:
+#     name: Backend IaC Scan
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+#         with:
+#           repository: jai3747/imdb-clone-backend
+#           token: ${{ secrets.GH_PAT }}
+#       - name: Checkov Scan
+#         uses: bridgecrewio/checkov-action@master
+#         continue-on-error: true
+#         with:
+#           directory: .
+#           framework: dockerfile,kubernetes,secrets
+
+#   # Frontend Docker Build and Scan
+#   frontend-build:
+#     needs: [frontend-trufflehog, frontend-semgrep, frontend-snyk, frontend-checkov]
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Frontend
+#         uses: actions/checkout@v3
+#         with:
+#           repository: jai3747/imdb-clone-frontend
+#           token: ${{ secrets.GH_PAT }}
 
 #       - name: Login to DockerHub
 #         uses: docker/login-action@v2
@@ -482,137 +775,93 @@
 #           username: ${{ secrets.DOCKER_USERNAME }}
 #           password: ${{ secrets.DOCKER_PASSWORD }}
 
-#       - name: Generate Docker metadata
-#         id: meta
-#         uses: docker/metadata-action@v4
-#         with:
-#           images: ${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}
-#           tags: |
-#             type=sha,format=long
-#             type=ref,event=branch
-#             type=ref,event=tag
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v2
 
-#       - name: Build for vulnerability scanning
+#       - name: Build Frontend Image
 #         uses: docker/build-push-action@v4
 #         with:
 #           context: .
+#           push: false
 #           load: true
-#           tags: ${{ steps.meta.outputs.tags }}
-#           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}:buildcache
-#           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}:buildcache,mode=max
+#           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
+#           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
+#           cache-to: type=inline
+#           build-args: |
+#             NODE_ENV=production
 
-#       - name: Run Trivy vulnerability scanner
+#       - name: Trivy Frontend Scan
 #         uses: aquasecurity/trivy-action@master
+#         continue-on-error: true
 #         with:
-#           image-ref: ${{ steps.meta.outputs.tags }}
-#           format: 'sarif'
-#           output: 'trivy-results.sarif'
+#           image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}'
+#           format: 'table'
+#           exit-code: '1'
+#           ignore-unfixed: true
 #           severity: 'CRITICAL,HIGH'
-          
-#       - name: Upload Trivy Results
-#         uses: github/codeql-action/upload-sarif@v2
-#         if: always()
-#         with:
-#           sarif_file: trivy-results.sarif
 
-#       - name: Build and push final image
+#       - name: Push Frontend Image
 #         uses: docker/build-push-action@v4
 #         with:
 #           context: .
 #           push: true
-#           tags: ${{ steps.meta.outputs.tags }}
-#           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-${{ matrix.repo }}:buildcache
+#           tags: |
+#             ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
+#             ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
 
-#   deploy:
-#     needs: docker-build
-#     name: Deploy to Kubernetes
+#   # Backend Docker Build and Scan
+#   backend-build:
+#     needs: [backend-trufflehog, backend-semgrep, backend-snyk, backend-checkov]
 #     runs-on: ubuntu-latest
-#     environment:
-#       name: production
 #     steps:
-#       - name: Checkout Infrastructure Code
+#       - name: Checkout Backend
 #         uses: actions/checkout@v3
 #         with:
 #           repository: jai3747/imdb-clone-backend
 #           token: ${{ secrets.GH_PAT }}
 
-#       - name: Setup Kustomize
-#         uses: imranismail/setup-kustomize@v2
-
-#       - name: Google Auth
-#         id: auth
-#         uses: google-github-actions/auth@v1
+#       - name: Login to DockerHub
+#         uses: docker/login-action@v2
 #         with:
-#           credentials_json: '${{ secrets.GCP_SA_KEY }}'
+#           username: ${{ secrets.DOCKER_USERNAME }}
+#           password: ${{ secrets.DOCKER_PASSWORD }}
 
-#       - name: Set up Cloud SDK
-#         uses: google-github-actions/setup-gcloud@v1
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v2
 
-#       - name: Install GKE auth plugin
-#         run: |
-#           gcloud components install gke-gcloud-auth-plugin
-#           gcloud components update
+#       - name: Build Backend Image
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: .
+#           push: false
+#           load: true
+#           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
+#           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
+#           cache-to: type=inline
+#           build-args: |
+#             NODE_ENV=production
 
-#       - name: Get GKE Credentials
-#         run: |
-#           gcloud container clusters get-credentials cluster-1 \
-#             --zone asia-south1-a \
-#             --project ${{ secrets.GCP_PROJECT_ID }}
+#       - name: Trivy Backend Scan
+#         uses: aquasecurity/trivy-action@master
+#         continue-on-error: true
+#         with:
+#           image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}'
+#           format: 'table'
+#           exit-code: '1'
+#           ignore-unfixed: true
+#           severity: 'CRITICAL,HIGH'
 
-#       - name: Create MongoDB Secret
-#         run: |
-#           kubectl create secret generic mongodb-secret \
-#             --from-literal=MONGO_URL=${{ secrets.MONGO_URL }} \
-#             --dry-run=client -o yaml | kubectl apply -f -
+#       - name: Push Backend Image
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: .
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
+#             ${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
 
-#       - name: Deploy Frontend
-#         run: |
-#           # Update image tag
-#           sed -i 's|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend@${{ github.sha }}|' k8.yaml
-          
-#           # Apply with validation
-#           kubectl apply -f k8.yaml --validate=true
-          
-#           # Wait for rollout
-#           kubectl rollout status deployment/frontend-deployment -n default --timeout=5m
-          
-#           # Verify deployment
-#           kubectl get deployment frontend-deployment -o wide
+#   # Deploy to Kubernetes
 
-#       - name: Deploy Backend
-#         run: |
-#           # Update image tag
-#           sed -i 's|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend@${{ github.sha }}|' k8.yaml
-          
-#           # Apply with validation
-#           kubectl apply -f k8.yaml --validate=true
-          
-#           # Wait for rollout
-#           kubectl rollout status deployment/backend-deployment -n default --timeout=5m
-          
-#           # Verify deployment
-#           kubectl get deployment backend-deployment -o wide
-
-#       - name: Post-deployment Checks
-#         run: |
-#           # Wait for services to be ready
-#           kubectl wait --for=condition=available --timeout=300s deployment/frontend-deployment
-#           kubectl wait --for=condition=available --timeout=300s deployment/backend-deployment
-          
-#           # Get service endpoints
-#           echo "Frontend Service:"
-#           kubectl get service frontend-service
-#           echo "Backend Service:"
-#           kubectl get service backend-service
-          
-#           # Check pod health
-#           echo "Pod Status:"
-#           kubectl get pods -l app=frontend
-#           kubectl get pods -l app=backend
-          
-#           # Check recent events
-#           echo "Recent Events:"
-#           kubectl get events --sort-by='.lastTimestamp' | tail -n 10
 name: Security & Build Pipeline
 
 on:
@@ -870,6 +1119,7 @@ jobs:
         with:
           repository: jai3747/imdb-clone-backend
           token: ${{ secrets.GH_PAT }}
+          path: backend
 
       - name: Google Auth
         id: auth
@@ -888,73 +1138,27 @@ jobs:
         run: |
           gcloud container clusters get-credentials cluster-1 --zone asia-south1-a --project ${{ secrets.GCP_PROJECT_ID }}
 
-      # Create MongoDB Secret
-      - name: Create MongoDB Secret
+      - name: Deploy Services
         run: |
-          cat <<EOF | kubectl apply -f -
-          apiVersion: v1
-          kind: Secret
-          metadata:
-            name: mongodb-secret
-          type: Opaque
-          stringData:
-            MONGO_URL: ${{ secrets.MONGO_URL }}
-          EOF
-
-      # Deploy Backend Components
-      - name: Deploy Backend Components
-        run: |
-          # Update backend image in k8.yaml
-          sed -i 's|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|' k8.yaml
-          
-          # Apply all Kubernetes resources
+          cd backend
           kubectl apply -f k8.yaml
           
-          # Wait for backend deployment
+          echo "Waiting for backend rollout..."
           kubectl rollout status deployment/backend-deployment -n default
           
-          # Verify backend deployment
-          echo "Checking backend deployment status..."
-          kubectl get deployment backend-deployment -n default
-          kubectl get pods -l app=backend -n default
-
-      # Deploy Frontend Components
-      - name: Checkout Frontend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-frontend
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Deploy Frontend Components
-        run: |
-          # Update frontend image in k8.yaml
-          sed -i 's|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}|' k8.yaml
-          
-          # Apply all Kubernetes resources
-          kubectl apply -f k8.yaml
-          
-          # Wait for frontend deployment
+          echo "Waiting for frontend rollout..."
           kubectl rollout status deployment/frontend-deployment -n default
-          
-          # Verify frontend deployment
-          echo "Checking frontend deployment status..."
-          kubectl get deployment frontend-deployment -n default
-          kubectl get pods -l app=frontend -n default
 
-      # Final Verification
-      - name: Verify All Deployments
+      - name: Verify Deployments
         run: |
-          echo "Checking all resources..."
-          kubectl get all -n default
+          echo "Checking deployments status:"
+          kubectl get deployments -n default
           
-          echo "Checking pod status..."
+          echo "Checking services status:"
+          kubectl get services -n default
+          
+          echo "Checking pods status:"
           kubectl get pods -n default
           
-          echo "Checking services..."
-          kubectl get svc -n default
-          
-          echo "Checking events..."
-          kubectl get events -n default --sort-by='.lastTimestamp'
-          
-          echo "Checking endpoints..."
-          kubectl get endpoints -n default
+          echo "Latest events:"
+          kubectl get events -n default --sort-by='.lastTimestamp' | tail -n 10
