@@ -170,8 +170,8 @@ jobs:
           context: .
           push: false
           load: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:latest
           cache-to: type=inline
           build-args: |
             NODE_ENV=production
@@ -180,7 +180,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
-          image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}'
+          image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -192,8 +192,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:latest
 
   # Backend Docker Build and Scan
   backend-build:
@@ -222,7 +222,7 @@ jobs:
           push: false
           load: true
           tags: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/imdb-clone-backend:latest
           cache-to: type=inline
           build-args: |
             NODE_ENV=production
@@ -231,7 +231,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
-          image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}'
+          image-ref: '${{ secrets.DOCKER_USERNAME }}/imdb-clone-backend:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -243,8 +243,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/imdb-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/imdb-clone-backend:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/imdb-clone-backend:latest
 
   # Deploy to Kubernetes
   deploy:
