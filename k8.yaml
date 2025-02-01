@@ -751,11 +751,11 @@ spec:
           value: "0.0.0.0"
         - name: PORT
           value: "3000"
-        - name: REACT_APP_API_URL
+        - name: REACT_APP_BACKEND_API
           valueFrom:
             configMapKeyRef:
               name: frontend-config
-              key: api_url
+              key: REACT_APP_BACKEND_API
         - name: NODE_ENV
           value: "production"
         readinessProbe:
@@ -806,4 +806,4 @@ kind: ConfigMap
 metadata:
   name: frontend-config
 data:
-  api_url: "http://34.100.186.170:5000/api"
+  REACT_APP_BACKEND_API: "http://34.100.186.170:5000/api"
