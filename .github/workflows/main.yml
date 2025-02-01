@@ -435,9 +435,9 @@ jobs:
           fi
         fi
 
-    # Enhanced Nuclei scan
-    - name: Run Nuclei Scan
-      uses: projectdiscovery/nuclei-action@main
+                  # Enhanced Nuclei scan
+      - name: Run Nuclei Scan
+        uses: projectdiscovery/nuclei-action@main
       continue-on-error: true
       with:
         target: ${{ env.APP_DOMAIN }}
@@ -449,8 +449,8 @@ jobs:
         retry-on-failure: true
 
     # Add automated vulnerability reporting
-    - name: Generate Security Report
-      if: always()
+      - name: Generate Security Report
+        if: always()
       run: |
         echo "# Security Scan Results" > security-report.md
         if [ -f zap-baseline-report.html ]; then
@@ -464,8 +464,8 @@ jobs:
         fi
 
     # Enhanced artifact upload
-    - name: Upload DAST Results
-      uses: actions/upload-artifact@v3
+      - name: Upload DAST Results
+        uses: actions/upload-artifact@v3
       if: always()
       with:
         name: dast-scan-results
@@ -476,8 +476,8 @@ jobs:
         retention-days: 14
 
     # Optional: Add notification for critical findings
-    - name: Notify on Critical Findings
-      if: always()
+      - name: Notify on Critical Findings
+        if: always()
       run: |
         if grep -q "critical" nuclei-output.txt || grep -q "FAIL-NEW: " zap-baseline-report.html; then
           echo "::warning ::Critical security issues found in DAST scan!"
