@@ -1571,15 +1571,15 @@ jobs:
       - name: Update and Deploy
         run: |
           # Update images in k8s.yaml
-          sed -i "s|image: .*imdb-frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}|g" k8s.yaml
-          sed -i "s|image: .*imdb-backend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|g" k8s.yaml
+          sed -i "s|image: .*imdb-frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-frontend:${{ github.sha }}|g" k8.yaml
+          sed -i "s|image: .*imdb-backend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-backend:${{ github.sha }}|g" k8.yaml
           
           # Show current state
           echo "Current State:"
           kubectl get all
           
           # Apply changes
-          kubectl apply -f k8s.yaml --validate=true
+          kubectl apply -f k8.yaml --validate=true
           
           # Wait for rollout
           for deploy in $(kubectl get deployments -o name); do
