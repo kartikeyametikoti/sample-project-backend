@@ -135,7 +135,7 @@ console.log(`Starting IMDB API Server - Version: ${buildVersion}`);
 // Updated CORS configuration to accept all origins in development
 app.use(cors({
   origin: '*',  // In production, you should specify exact origins
-  methods: ['GET', 'POST', 'PUT', DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 
