@@ -246,4 +246,4 @@ kind: ConfigMap
 metadata:
   name: frontend-config
 data:
-  REACT_APP_BACKEND_API: "http://backend.awsaparna123.xyz:5000/api"
+  REACT_APP_BACKEND_API: "http://34.47.190.151:5000/api"
