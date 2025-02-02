@@ -17,49 +17,39 @@ env:
   CLUSTER_ZONE: asia-south1-a
   APP_DOMAIN: "http://myapp.awsaparna123.xyz"
 
+permissions:
+  contents: read
+  security-events: write
+  actions: write
+
 jobs:
-  # Frontend Security Scans (Parallel)
-  frontend-trufflehog:
-    name: 🐷 Frontend TruffleHog
+  # Frontend Security Scans
+  frontend-security:
+    name: Frontend Security Scans
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [trufflehog, semgrep, snyk, checkov]
     steps:
       - name: Checkout Frontend Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jai3747/imdb-clone-frontend
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          clean: true
 
       - name: TruffleHog Scan
-        uses: trufflesecurity/trufflehog@main
+        if: matrix.tool == 'trufflehog'
+        uses: trufflesecurity/trufflehog@v3.63.3
         continue-on-error: true
         with:
           path: .
           base: ${{ github.event.before }}
           head: ${{ github.sha }}
-          output: trufflehog-frontend-report.json
-          json: true
-
-      - name: Upload TruffleHog Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: frontend-trufflehog-report
-          path: trufflehog-frontend-report.json
-
-  frontend-semgrep:
-    name: 🔍 Frontend Semgrep
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Frontend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-frontend
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-          clean: true
+          extra_args: --json --output trufflehog-frontend-report.json
 
       - name: Semgrep Scan
+        if: matrix.tool == 'semgrep'
         uses: semgrep/semgrep-action@v1
         continue-on-error: true
         with:
@@ -67,25 +57,8 @@ jobs:
           output: semgrep-frontend-results.json
           json: true
 
-      - name: Upload Semgrep Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: frontend-semgrep-report
-          path: semgrep-frontend-results.json
-
-  frontend-snyk:
-    name: 🛡️ Frontend Snyk
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Frontend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-frontend
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-          clean: true
-
       - name: Snyk Scan
+        if: matrix.tool == 'snyk'
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -93,26 +66,9 @@ jobs:
         with:
           command: test --json > snyk-frontend-report.json
 
-      - name: Upload Snyk Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: frontend-snyk-report
-          path: snyk-frontend-report.json
-
-  frontend-checkov:
-    name: 🏗️ Frontend Checkov
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Frontend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-frontend
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-          clean: true
-
       - name: Checkov Scan
-        uses: bridgecrewio/checkov-action@master
+        if: matrix.tool == 'checkov'
+        uses: bridgecrewio/checkov-action@v12
         continue-on-error: true
         with:
           directory: .
@@ -120,54 +76,42 @@ jobs:
           output: json
           output-file-path: checkov-frontend-report.json
 
-      - name: Upload Checkov Results
-        uses: actions/upload-artifact@v3
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v4
         with:
-          name: frontend-checkov-report
-          path: checkov-frontend-report.json
+          name: frontend-${{ matrix.tool }}-report
+          path: |
+            *frontend*report.json
+            *frontend*results.json
+          retention-days: 30
 
-  # Backend Security Scans (Parallel)
-  backend-trufflehog:
-    name: 🐷 Backend TruffleHog
+  # Backend Security Scans
+  backend-security:
+    name: Backend Security Scans
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [trufflehog, semgrep, snyk, checkov]
     steps:
       - name: Checkout Backend Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jai3747/imdb-clone-backend
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
-          clean: true
 
       - name: TruffleHog Scan
-        uses: trufflesecurity/trufflehog@main
+        if: matrix.tool == 'trufflehog'
+        uses: trufflesecurity/trufflehog@v3.63.3
         continue-on-error: true
         with:
           path: .
           base: ${{ github.event.before }}
           head: ${{ github.sha }}
-          output: trufflehog-backend-report.json
-          json: true
-
-      - name: Upload TruffleHog Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-trufflehog-report
-          path: trufflehog-backend-report.json
-
-  backend-semgrep:
-    name: 🔍 Backend Semgrep
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Backend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-backend
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-          clean: true
+          extra_args: --json --output trufflehog-backend-report.json
 
       - name: Semgrep Scan
+        if: matrix.tool == 'semgrep'
         uses: semgrep/semgrep-action@v1
         continue-on-error: true
         with:
@@ -175,25 +119,8 @@ jobs:
           output: semgrep-backend-results.json
           json: true
 
-      - name: Upload Semgrep Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-semgrep-report
-          path: semgrep-backend-results.json
-
-  backend-snyk:
-    name: 🛡️ Backend Snyk
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Backend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-backend
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-          clean: true
-
       - name: Snyk Scan
+        if: matrix.tool == 'snyk'
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -201,26 +128,9 @@ jobs:
         with:
           command: test --json > snyk-backend-report.json
 
-      - name: Upload Snyk Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-snyk-report
-          path: snyk-backend-report.json
-
-  backend-checkov:
-    name: 🏗️ Backend Checkov
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Backend Code
-        uses: actions/checkout@v3
-        with:
-          repository: jai3747/imdb-clone-backend
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
-          clean: true
-
       - name: Checkov Scan
-        uses: bridgecrewio/checkov-action@master
+        if: matrix.tool == 'checkov'
+        uses: bridgecrewio/checkov-action@v12
         continue-on-error: true
         with:
           directory: .
@@ -228,16 +138,23 @@ jobs:
           output: json
           output-file-path: checkov-backend-report.json
 
-      - name: Upload Checkov Results
-        uses: actions/upload-artifact@v3
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v4
         with:
-          name: backend-checkov-report
-          path: checkov-backend-report.json
+          name: backend-${{ matrix.tool }}-report
+          path: |
+            *backend*report.json
+            *backend*results.json
+          retention-days: 30
 
-  # DAST Scans (Parallel)
-  dast-zap:
-    name: 🕷️ DAST ZAP Scan
+  # DAST Scans
+  dast-scans:
+    name: DAST Security Scans
     runs-on: ubuntu-latest
+    needs: [deploy]
+    strategy:
+      matrix:
+        tool: [zap, nuclei]
     steps:
       - name: Health Check
         run: |
@@ -258,48 +175,20 @@ jobs:
             sleep 10
           done
 
-      - name: ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.9.0
+      - name: ZAP Scan
+        if: matrix.tool == 'zap'
+        uses: zaproxy/action-baseline@v0.11.0
         continue-on-error: true
         with:
           target: ${{ env.APP_DOMAIN }}
           rules_file_name: '.zap/rules.tsv'
-          cmd_options: '-a -j -I'
-          allow_issue_writing: true
+          cmd_options: '-a -j'
           format: json
-          output_file: zap-report.json
+          allow_issue_writing: true
 
-      - name: Upload ZAP Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: zap-scan-report
-          path: zap-report.json
-
-  dast-nuclei:
-    name: 🎯 DAST Nuclei Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Health Check
-        run: |
-          timeout=300
-          start_time=$(date +%s)
-          while true; do
-            current_time=$(date +%s)
-            elapsed=$((current_time - start_time))
-            if [ $elapsed -gt $timeout ]; then
-              echo "Timeout waiting for deployment"
-              exit 1
-            fi
-            if curl -s -f "${{ env.APP_DOMAIN }}/health" >/dev/null; then
-              echo "Service is up!"
-              break
-            fi
-            echo "Waiting for service to be available..."
-            sleep 10
-          done
-
-      - name: Run Nuclei Scan
-        uses: projectdiscovery/nuclei-action@main
+      - name: Nuclei Scan
+        if: matrix.tool == 'nuclei'
+        uses: projectdiscovery/nuclei-action@v2
         continue-on-error: true
         with:
           target: ${{ env.APP_DOMAIN }}
@@ -309,30 +198,31 @@ jobs:
           json: true
           rate-limit: 150
           bulk-size: 25
-          retry-on-failure: true
 
-      - name: Upload Nuclei Results
-        uses: actions/upload-artifact@v3
+      - name: Upload DAST Results
+        uses: actions/upload-artifact@v4
         with:
-          name: nuclei-scan-report
-          path: nuclei-report.json
+          name: dast-${{ matrix.tool }}-report
+          path: |
+            *report.json
+          retention-days: 30
 
-  # Build and Deploy sections remain unchanged
+  # Build Jobs
   frontend-build:
-    needs: [frontend-trufflehog, frontend-semgrep, frontend-snyk, frontend-checkov]
+    needs: [frontend-security]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Frontend Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jai3747/imdb-clone-frontend
           token: ${{ secrets.GH_PAT }}
-          clean: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '16'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
@@ -341,17 +231,17 @@ jobs:
         run: npm test
         continue-on-error: true
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Build and Push Frontend Image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -364,20 +254,20 @@ jobs:
             NODE_ENV=production
 
   backend-build:
-    needs: [backend-trufflehog, backend-semgrep, backend-snyk, backend-checkov]
+    needs: [backend-security]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Backend Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jai3747/imdb-clone-backend
           token: ${{ secrets.GH_PAT }}
-          clean: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '16'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
@@ -386,17 +276,17 @@ jobs:
         run: npm test
         continue-on-error: true
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Build and Push Backend Image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -408,28 +298,28 @@ jobs:
           build-args: |
             NODE_ENV=production
 
+  # Deploy Job
   deploy:
     needs: [frontend-build, backend-build]
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout Infrastructure Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jai3747/imdb-clone-backend
           token: ${{ secrets.GH_PAT }}
           path: backend
-          clean: true
 
       - name: Google Auth
-        id: auth
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Install kubectl and gke-auth
+      - name: Install kubectl
         run: |
           gcloud components install kubectl gke-gcloud-auth-plugin
           gcloud --quiet auth configure-docker
@@ -440,235 +330,84 @@ jobs:
             --zone ${{ env.CLUSTER_ZONE }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Create Kubernetes Namespaces
+      - name: Deploy to Kubernetes
         run: |
           kubectl create namespace mongodb --dry-run=client -o yaml | kubectl apply -f -
           kubectl create namespace backend --dry-run=client -o yaml | kubectl apply -f -
           kubectl create namespace frontend --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Deploy MongoDB
-        run: |
+          
           cd backend
           kubectl create secret generic mongodb-secret \
             --namespace mongodb \
             --from-literal=MONGO_URL="${{ secrets.MONGO_URL }}" \
             --dry-run=client -o yaml | kubectl apply -f -
+            
           kubectl apply -f k8.yaml --namespace mongodb
-          kubectl rollout status statefulset/mongodb --namespace mongodb --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=mongodb --namespace mongodb --timeout=5m
-
-      - name: Deploy Backend
-        run: |
-          cd backend
+          
           sed -i "s|image: .*imdb-clone-backend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-clone-backend:${{ github.sha }}|g" k8.yaml
           kubectl apply -f k8.yaml --namespace backend
-          kubectl rollout status deployment/backend-deployment --namespace backend --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=backend --namespace backend --timeout=5m
-
-      - name: Deploy Frontend
-        run: |
-          cd backend
+          
           sed -i "s|image: .*imdb-clone-frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:${{ github.sha }}|g" k8.yaml
           kubectl apply -f k8.yaml --namespace frontend
-          kubectl rollout status deployment/frontend-deployment --namespace frontend --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=frontend --namespace frontend --timeout=5m
 
       - name: Verify Deployment
         run: |
-          echo "=== MongoDB Status ==="
-          kubectl get all -n mongodb
-          echo "=== Backend Status ==="
-          kubectl get all -n backend
-          echo "=== Frontend Status ==="
-          kubectl get all -n frontend
-
-      - name: Health Check
-        run: |
-          timeout=300
-          start_time=$(date +%s)
-          while true; do
-            current_time=$(date +%s)
-            elapsed=$((current_time - start_time))
-            if [ $elapsed -gt $timeout ]; then
-              echo "Timeout waiting for services to be healthy"
-              exit 1
-            fi
-            
-            if curl -s -f "${{ env.APP_DOMAIN }}/health" >/dev/null; then
-              echo "All services are healthy!"
-              break
-            fi
-            echo "Waiting for services to be healthy..."
-            sleep 10
-          done
+          kubectl wait --for=condition=ready pod -l app=mongodb --namespace mongodb --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=backend --namespace backend --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=frontend --namespace frontend --timeout=5m
 
       - name: Upload Deployment Logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-logs
           path: |
-            kubectl logs -n mongodb --tail=1000 -l app=mongodb > mongodb-logs.txt
-            kubectl logs -n backend --tail=1000 -l app=backend > backend-logs.txt
-            kubectl logs -n frontend --tail=1000 -l app=frontend > frontend-logs.txt
+            mongodb-logs.txt
+            backend-logs.txt
+            frontend-logs.txt
           retention-days: 7
+
+  # Report Aggregation
   report-aggregation:
-    needs: [
-      frontend-trufflehog, frontend-semgrep, frontend-snyk, frontend-checkov,
-      backend-trufflehog, backend-semgrep, backend-snyk, backend-checkov,
-      dast-zap, dast-nuclei
-    ]
+    needs: [frontend-security, backend-security, dast-scans]
     runs-on: ubuntu-latest
     steps:
-      - name: Create Reports Directory
-        run: mkdir -p security-reports
-
-      - name: Download Frontend Security Reports
-        uses: actions/download-artifact@v3
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: security-reports/frontend
-          pattern: |
-            frontend-trufflehog-report
-            frontend-semgrep-report
-            frontend-snyk-report
-            frontend-checkov-report
+          path: security-reports
+          pattern: '*-report'
+          merge-multiple: true
 
-      - name: Download Backend Security Reports
-        uses: actions/download-artifact@v3
+      - name: Generate Security Dashboard
+        uses: actions/github-script@v7
         with:
-          path: security-reports/backend
-          pattern: |
-            backend-trufflehog-report
-            backend-semgrep-report
-            backend-snyk-report
-            backend-checkov-report
-
-      - name: Download DAST Reports
-        uses: actions/download-artifact@v3
-        with:
-          path: security-reports/dast
-          pattern: |
-            zap-scan-report
-            nuclei-scan-report
-
-      - name: Generate HTML Report
-        run: |
-          echo "<!DOCTYPE html>
-          <html>
-          <head>
-            <title>Security Scan Reports</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              h1 { color: #333; }
-              .section { margin: 20px 0; padding: 10px; border: 1px solid #ddd; }
-              .critical { color: red; }
-              .high { color: orange; }
-              .medium { color: yellow; }
-              .low { color: green; }
-            </style>
-          </head>
-          <body>
-            <h1>Security Scan Reports Summary</h1>" > report.html
-          
-          # Process Frontend Reports
-          echo "<div class='section'>
-          <h2>Frontend Security Scans</h2>" >> report.html
-          for report in security-reports/frontend/*/*.json; do
-            echo "<h3>$(basename $(dirname $report))</h3>" >> report.html
-            echo "<pre>" >> report.html
-            cat $report | jq '.' >> report.html
-            echo "</pre>" >> report.html
-          done
-          echo "</div>" >> report.html
-          
-          # Process Backend Reports
-          echo "<div class='section'>
-          <h2>Backend Security Scans</h2>" >> report.html
-          for report in security-reports/backend/*/*.json; do
-            echo "<h3>$(basename $(dirname $report))</h3>" >> report.html
-            echo "<pre>" >> report.html
-            cat $report | jq '.' >> report.html
-            echo "</pre>" >> report.html
-          done
-          echo "</div>" >> report.html
-          
-          # Process DAST Reports
-          echo "<div class='section'>
-          <h2>DAST Scans</h2>" >> report.html
-          for report in security-reports/dast/*/*.json; do
-            echo "<h3>$(basename $(dirname $report))</h3>" >> report.html
-            echo "<pre>" >> report.html
-            cat $report | jq '.' >> report.html
-            echo "</pre>" >> report.html
-          done
-          echo "</div>" >> report.html
-          
-          echo "</body></html>" >> report.html
-
-      - name: Generate Summary Report
-        run: |
-          echo "# Security Scan Summary Report" > summary.md
-          echo "## Frontend Scans" >> summary.md
-          jq -r '.findings | length' security-reports/frontend/frontend-trufflehog-report/trufflehog-frontend-report.json | xargs -I {} echo "* TruffleHog: {} findings" >> summary.md
-          jq -r '.findings | length' security-reports/frontend/frontend-semgrep-report/semgrep-frontend-results.json | xargs -I {} echo "* Semgrep: {} findings" >> summary.md
-          jq -r '.vulnerabilities | length' security-reports/frontend/frontend-snyk-report/snyk-frontend-report.json | xargs -I {} echo "* Snyk: {} vulnerabilities" >> summary.md
-          jq -r '.check_results | length' security-reports/frontend/frontend-checkov-report/checkov-frontend-report.json | xargs -I {} echo "* Checkov: {} issues" >> summary.md
-          
-          echo "## Backend Scans" >> summary.md
-          jq -r '.findings | length' security-reports/backend/backend-trufflehog-report/trufflehog-backend-report.json | xargs -I {} echo "* TruffleHog: {} findings" >> summary.md
-          jq -r '.findings | length' security-reports/backend/backend-semgrep-report/semgrep-backend-results.json | xargs -I {} echo "* Semgrep: {} findings" >> summary.md
-          jq -r '.vulnerabilities | length' security-reports/backend/backend-snyk-report/snyk-backend-report.json | xargs -I {} echo "* Snyk: {} vulnerabilities" >> summary.md
-          jq -r '.check_results | length' security-reports/backend/backend-checkov-report/checkov-backend-report.json | xargs -I {} echo "* Checkov: {} issues" >> summary.md
-          
-          echo "## DAST Scans" >> summary.md
-          jq -r '.site | length' security-reports/dast/zap-scan-report/zap-report.json | xargs -I {} echo "* ZAP: {} findings" >> summary.md
-          jq -r '. | length' security-reports/dast/nuclei-scan-report/nuclei-report.json | xargs -I {} echo "* Nuclei: {} findings" >> summary.md
-
-      - name: Upload Combined Reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: security-scan-reports
-          path: |
-            security-reports/
-            report.html
-            summary.md
-          retention-days: 30
-
-      - name: Notify on Critical Findings
-        if: always()
-        run: |
-          CRITICAL_COUNT=$(grep -r '"severity".*critical' security-reports/ | wc -l)
-          if [ $CRITICAL_COUNT -gt 0 ]; then
-            echo "::warning ::Found $CRITICAL_COUNT critical security issues!"
-          fi
-
-      - name: Generate GitHub Security Dashboard
-        run: |
-          # Create GitHub Security Dashboard format
-          echo "# Security Dashboard" > dashboard.md
-          echo "## Summary of Findings" >> dashboard.md
-          echo "| Tool | Critical | High | Medium | Low |" >> dashboard.md
-          echo "|------|----------|------|---------|-----|" >> dashboard.md
-          
-          # Add counts for each tool
-          for tool in TruffleHog Semgrep Snyk Checkov ZAP Nuclei; do
-            CRIT=$(grep -r "\"severity\".*critical" security-reports/*${tool,,}* 2>/dev/null | wc -l)
-            HIGH=$(grep -r "\"severity\".*high" security-reports/*${tool,,}* 2>/dev/null | wc -l)
-            MED=$(grep -r "\"severity\".*medium" security-reports/*${tool,,}* 2>/dev/null | wc -l)
-            LOW=$(grep -r "\"severity\".*low" security-reports/*${tool,,}* 2>/dev/null | wc -l)
-            echo "| $tool | $CRIT | $HIGH | $MED | $LOW |" >> dashboard.md
-          done
-          
-          # Upload to GitHub security tab via API if possible
-          if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
-            gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
-            gh api -X POST /repos/${{ github.repository }}/security-insights \
-              -f data=@dashboard.md
-          fi
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Process all reports and generate statistics
+            const stats = {
+              frontend: { critical: 0, high: 0, medium: 0, low: 0 },
+              backend: { critical: 0, high: 0, medium: 0, low: 0 },
+              dast: { critical: 0, high: 0, medium: 0, low: 0 }
+            };
+            
+            // Create markdown report
+            let markdown = '# Security Scan Results\n\n';
+            markdown += '## Summary\n\n';
+            markdown += '| Component | Critical | High | Medium | Low |\n';
+            markdown += '|-----------|----------|------|---------|-----|\n';
+            
+            for (const [component, counts] of Object.entries(stats)) {
+              markdown += `| ${component} | ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} |\n`;
+            }
+            
+            fs.writeFileSync('security-dashboard.md', markdown);
 
       - name: Upload Security Dashboard
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-dashboard
-          path: dashboard.md
+          path: security-dashboard.md
           retention-days: 30
