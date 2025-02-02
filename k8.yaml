@@ -109,7 +109,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: jai3747/imdb-clone-backend:latest
+        image: jai3747/imdb-clone-backend:dece5838ccb7255a3dd4e497c2eab5801a9eae0da
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
@@ -183,7 +183,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: jai3747/imdb-clone-frontend:latest
+        image: jai3747/imdb-clone-frontend:dece5838ccb7255a3dd4e497c2eab5801a9eae0d
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
