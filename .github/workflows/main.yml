@@ -420,7 +420,6 @@ jobs:
           docker tag ${{ env.BACKEND_IMAGE }}:${{ github.sha }} ${{ env.BACKEND_IMAGE }}:latest
           docker push ${{ env.BACKEND_IMAGE }}:latest
 
-  # Continuation of deploy job
   deploy:
     needs: [frontend-build, backend-build]
     runs-on: ubuntu-latest
@@ -431,64 +430,68 @@ jobs:
           repository: jai3747/imdb-clone-backend
           token: ${{ secrets.GH_PAT }}
           path: backend
-
+          
       - name: Google Auth
         id: auth
         uses: google-github-actions/auth@v1
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
-
+          
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
-
+        
       - name: Install kubectl and gke-auth
         run: |
           gcloud components install kubectl gke-gcloud-auth-plugin
           gcloud --quiet auth configure-docker
-
+          
       - name: Get GKE Credentials
         run: |
           gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
             --zone ${{ env.CLUSTER_ZONE }} \
             --project ${{ secrets.GCP_PROJECT_ID }}
-
+            
       - name: Create Kubernetes Namespaces
         run: |
           kubectl create namespace mongodb --dry-run=client -o yaml | kubectl apply -f -
           kubectl create namespace backend --dry-run=client -o yaml | kubectl apply -f -
           kubectl create namespace frontend --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Deploy MongoDB
+          
+      - name: Create Secrets
         run: |
-          cd backend
           kubectl create secret generic mongodb-secret \
             --namespace mongodb \
             --from-literal=MONGO_URL="${{ secrets.MONGO_URL }}" \
             --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f k8s/mongodb.yaml --namespace mongodb
-          kubectl rollout status statefulset/mongodb --namespace mongodb --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=mongodb --namespace mongodb --timeout=5m
-
-      - name: Deploy Backend
-        run: |
-          cd backend
           kubectl create secret generic backend-secret \
             --namespace backend \
             --from-literal=MONGO_URL="${{ secrets.MONGO_URL }}" \
             --dry-run=client -o yaml | kubectl apply -f -
-          sed -i "s|image: .*imdb-clone-backend.*|image: ${{ env.BACKEND_IMAGE }}:${{ needs.backend-build.outputs.image_tag }}|g" k8s/backend.yaml
-          kubectl apply -f k8s/backend.yaml --namespace backend
-          kubectl rollout status deployment/backend-deployment --namespace backend --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=backend --namespace backend --timeout=5m
-
-      - name: Deploy Frontend
+            
+      - name: Update Image Tags
         run: |
           cd backend
-          sed -i "s|image: .*imdb-clone-frontend.*|image: ${{ env.FRONTEND_IMAGE }}:${{ needs.frontend-build.outputs.image_tag }}|g" k8s/frontend.yaml
-          kubectl apply -f k8s/frontend.yaml --namespace frontend
+          sed -i "s|image: .*imdb-clone-backend.*|image: ${{ env.BACKEND_IMAGE }}:${{ needs.backend-build.outputs.image_tag }}|g" k8.yaml
+          sed -i "s|image: .*imdb-clone-frontend.*|image: ${{ env.FRONTEND_IMAGE }}:${{ needs.frontend-build.outputs.image_tag }}|g" k8.yaml
+          
+      - name: Deploy Applications
+        run: |
+          cd backend
+          kubectl apply -f k8.yaml --namespace mongodb
+          kubectl apply -f k8.yaml --namespace backend
+          kubectl apply -f k8.yaml --namespace frontend
+          
+      - name: Wait for Deployments
+        run: |
+          kubectl rollout status statefulset/mongodb --namespace mongodb --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=mongodb --namespace mongodb --timeout=5m
+          
+          kubectl rollout status deployment/backend-deployment --namespace backend --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=backend --namespace backend --timeout=5m
+          
           kubectl rollout status deployment/frontend-deployment --namespace frontend --timeout=5m
           kubectl wait --for=condition=ready pod -l app=frontend --namespace frontend --timeout=5m
-
+          
       - name: Verify Deployment
         run: |
           echo "=== MongoDB Status ==="
