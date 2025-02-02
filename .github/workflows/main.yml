@@ -910,8 +910,22 @@ jobs:
           kubectl get all -n frontend
 
   # Report Aggregation
+  
   report-aggregation:
-    needs: [frontend-security, backend-security, dast-scans]
+    needs:
+      - frontend-trufflehog
+      - frontend-semgrep
+      - frontend-snyk
+      - frontend-checkov
+      - backend-trufflehog
+      - backend-semgrep
+      - backend-snyk
+      - backend-checkov
+      - dast-zap
+      - dast-nuclei
+      - frontend-build
+      - backend-build
+      - deploy
     runs-on: ubuntu-latest
     steps:
       - name: Download All Artifacts
@@ -935,17 +949,76 @@ jobs:
               dast: { critical: 0, high: 0, medium: 0, low: 0 }
             };
             
+            // Read and process all report files
+            const reportPath = 'security-reports';
+            const files = fs.readdirSync(reportPath);
+            
+            for (const file of files) {
+              const content = fs.readFileSync(path.join(reportPath, file), 'utf8');
+              try {
+                const report = JSON.parse(content);
+                const component = file.includes('frontend') ? 'frontend' 
+                               : file.includes('backend') ? 'backend' 
+                               : 'dast';
+                               
+                // Process findings based on tool-specific format
+                if (file.includes('trufflehog')) {
+                  report.forEach(finding => {
+                    stats[component][finding.severity.toLowerCase()]++;
+                  });
+                } else if (file.includes('semgrep')) {
+                  report.results.forEach(finding => {
+                    stats[component][finding.extra.severity.toLowerCase()]++;
+                  });
+                } else if (file.includes('snyk')) {
+                  report.vulnerabilities.forEach(vuln => {
+                    stats[component][vuln.severity.toLowerCase()]++;
+                  });
+                } else if (file.includes('checkov')) {
+                  report.results.failed_checks.forEach(check => {
+                    stats[component][check.severity.toLowerCase()]++;
+                  });
+                } else if (file.includes('zap') || file.includes('nuclei')) {
+                  report.findings.forEach(finding => {
+                    stats[component][finding.severity.toLowerCase()]++;
+                  });
+                }
+              } catch (error) {
+                console.error(`Error processing ${file}: ${error.message}`);
+              }
+            }
+            
             // Create markdown report
             let markdown = '# Security Scan Results\n\n';
+            
+            // Add timestamp
+            markdown += `Report generated on: ${new Date().toISOString()}\n\n`;
+            
+            // Summary section
             markdown += '## Summary\n\n';
             markdown += '| Component | Critical | High | Medium | Low |\n';
             markdown += '|-----------|----------|------|---------|-----|\n';
             
+            // Add component statistics
             for (const [component, counts] of Object.entries(stats)) {
               markdown += `| ${component} | ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} |\n`;
             }
             
+            // Add total row
+            const totals = {
+              critical: Object.values(stats).reduce((sum, counts) => sum + counts.critical, 0),
+              high: Object.values(stats).reduce((sum, counts) => sum + counts.high, 0),
+              medium: Object.values(stats).reduce((sum, counts) => sum + counts.medium, 0),
+              low: Object.values(stats).reduce((sum, counts) => sum + counts.low, 0)
+            };
+            markdown += `| **Total** | **${totals.critical}** | **${totals.high}** | **${totals.medium}** | **${totals.low}** |\n\n`;
+            
+            // Write the report
             fs.writeFileSync('security-dashboard.md', markdown);
+            
+            // Log statistics to console
+            console.log('Security scan statistics:', stats);
+
       - name: Upload Security Dashboard
         uses: actions/upload-artifact@v4
         with:
