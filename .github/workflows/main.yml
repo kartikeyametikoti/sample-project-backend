@@ -2,9 +2,9 @@ name: Security & Build Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
@@ -25,7 +25,7 @@ permissions:
   actions: write
 
 jobs:
-  # Frontend Security Scans (Parallel)
+  # Frontend Security Scans
   frontend-trufflehog:
     name: 🐷 Frontend TruffleHog
     runs-on: ubuntu-latest
@@ -156,7 +156,7 @@ jobs:
           path: trivy-frontend-report.json
           retention-days: 30
 
-  # Backend Security Scans (Parallel)
+  # Backend Security Scans
   backend-trufflehog:
     name: 🐷 Backend TruffleHog
     runs-on: ubuntu-latest
@@ -287,7 +287,7 @@ jobs:
           path: trivy-backend-report.json
           retention-days: 30
 
-  # Build Jobs with improved Docker handling
+  # Build Jobs
   frontend-build:
     needs: [frontend-trufflehog, frontend-semgrep, frontend-snyk, frontend-checkov, frontend-trivy]
     runs-on: ubuntu-latest
@@ -419,18 +419,18 @@ jobs:
           docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           docker tag ${{ env.BACKEND_IMAGE }}:${{ github.sha }} ${{ env.BACKEND_IMAGE }}:latest
           docker push ${{ env.BACKEND_IMAGE }}:latest
-    # Deploy to Kubernetes
+
+  # Continuation of deploy job
   deploy:
-    needs: [frontend-trivy, backend-trivy, frontend-build, backend-build]
+    needs: [frontend-build, backend-build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Infrastructure Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jai3747/imdb-clone-backend
           token: ${{ secrets.GH_PAT }}
           path: backend
-          clean: true
 
       - name: Google Auth
         id: auth
@@ -465,23 +465,27 @@ jobs:
             --namespace mongodb \
             --from-literal=MONGO_URL="${{ secrets.MONGO_URL }}" \
             --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f k8.yaml --namespace mongodb
+          kubectl apply -f k8s/mongodb.yaml --namespace mongodb
           kubectl rollout status statefulset/mongodb --namespace mongodb --timeout=5m
           kubectl wait --for=condition=ready pod -l app=mongodb --namespace mongodb --timeout=5m
 
       - name: Deploy Backend
         run: |
           cd backend
-          sed -i "s|image: .*imdb-clone-backend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-clone-backend:${{ needs.backend-build.outputs.image_tag }}|g" k8.yaml
-          kubectl apply -f k8.yaml --namespace backend
+          kubectl create secret generic backend-secret \
+            --namespace backend \
+            --from-literal=MONGO_URL="${{ secrets.MONGO_URL }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          sed -i "s|image: .*imdb-clone-backend.*|image: ${{ env.BACKEND_IMAGE }}:${{ needs.backend-build.outputs.image_tag }}|g" k8s/backend.yaml
+          kubectl apply -f k8s/backend.yaml --namespace backend
           kubectl rollout status deployment/backend-deployment --namespace backend --timeout=5m
           kubectl wait --for=condition=ready pod -l app=backend --namespace backend --timeout=5m
 
       - name: Deploy Frontend
         run: |
           cd backend
-          sed -i "s|image: .*imdb-clone-frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/imdb-clone-frontend:${{ needs.frontend-build.outputs.image_tag }}|g" k8.yaml
-          kubectl apply -f k8.yaml --namespace frontend
+          sed -i "s|image: .*imdb-clone-frontend.*|image: ${{ env.FRONTEND_IMAGE }}:${{ needs.frontend-build.outputs.image_tag }}|g" k8s/frontend.yaml
+          kubectl apply -f k8s/frontend.yaml --namespace frontend
           kubectl rollout status deployment/frontend-deployment --namespace frontend --timeout=5m
           kubectl wait --for=condition=ready pod -l app=frontend --namespace frontend --timeout=5m
 
@@ -527,16 +531,6 @@ jobs:
           cmd_options: '-a -j -I'
           allow_issue_writing: true
 
-      - name: Process ZAP Report
-        if: always()
-        run: |
-          if [ -f zap-baseline-report.html ]; then
-            echo "ZAP scan completed - checking results"
-            if grep -q "FAIL-NEW: " zap-baseline-report.html; then
-              echo "New vulnerabilities detected!"
-            fi
-          fi
-
       - name: Run Nuclei Scan
         uses: projectdiscovery/nuclei-action@main
         continue-on-error: true
@@ -548,109 +542,44 @@ jobs:
           rate-limit: 150
           bulk-size: 25
           retry-on-failure: true
-   
-    # Add automated vulnerability reporting
-      - name: Generate Security Report
-        if: always()
-        run: |
-         echo "# Security Scan Results" > security-report.md
-         if [ -f zap-baseline-report.html ]; then
-           echo "ZAP scan completed. See attached HTML report." >> security-report.md
-         fi
-         echo "## Nuclei Scan Results" >> security-report.md
-         if [ -f nuclei-output.txt ]; then
-           echo "\`\`\`" >> security-report.md
-           cat nuclei-output.txt >> security-report.md
-           echo "\`\`\`" >> security-report.md
-         fi
-    # Report Aggregation
-  report-aggregation:
-    needs:
-      - dast-zap
-      - dast-nuclei
+
+  # Report Aggregation
+  security-report:
+    needs: [dast-scan]
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: security-reports
-          pattern: '*-report'
+          pattern: '*-report*'
           merge-multiple: true
 
       - name: Generate Security Dashboard
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-            
-            // Process all reports and generate statistics
-            const stats = {
-              frontend: { critical: 0, high: 0, medium: 0, low: 0 },
-              backend: { critical: 0, high: 0, medium: 0, low: 0 },
-              dast: { critical: 0, high: 0, medium: 0, low: 0 }
-            };
-            
-            // Read and process all report files
-            const reportPath = 'security-reports';
-            const files = fs.readdirSync(reportPath);
-            
-            for (const file of files) {
-              const content = fs.readFileSync(path.join(reportPath, file), 'utf8');
-              try {
-                const report = JSON.parse(content);
-                const component = file.includes('frontend') ? 'frontend' 
-                               : file.includes('backend') ? 'backend' 
-                               : 'dast';
-                               
-                // Process findings based on tool-specific format
-                if (file.includes('trufflehog')) {
-                  report.forEach(finding => {
-                    stats[component][finding.severity.toLowerCase()]++;
-                  });
-                } else if (file.includes('semgrep')) {
-                  report.results.forEach(finding => {
-                    stats[component][finding.extra.severity.toLowerCase()]++;
-                  });
-                } else if (file.includes('snyk')) {
-                  report.vulnerabilities.forEach(vuln => {
-                    stats[component][vuln.severity.toLowerCase()]++;
-                  });
-                } else if (file.includes('checkov')) {
-                  report.results.failed_checks.forEach(check => {
-                    stats[component][check.severity.toLowerCase()]++;
-                  });
-                } else if (file.includes('zap') || file.includes('nuclei')) {
-                  report.findings.forEach(finding => {
-                    stats[component][finding.severity.toLowerCase()]++;
-                  });
-                }
-              } catch (error) {
-                console.error(`Error processing ${file}: ${error.message}`);
-              }
-            }
-            
-            // Create markdown report
-            let markdown = '# Security Scan Results\n\n';
-            markdown += `Report generated on: ${new Date().toISOString()}\n\n`;
-            markdown += '## Summary\n\n';
-            markdown += '| Component | Critical | High | Medium | Low |\n';
-            markdown += '|-----------|----------|------|---------|-----|\n';
-            
-            for (const [component, counts] of Object.entries(stats)) {
-              markdown += `| ${component} | ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} |\n`;
-            }
-            
-            const totals = {
-              critical: Object.values(stats).reduce((sum, counts) => sum + counts.critical, 0),
-              high: Object.values(stats).reduce((sum, counts) => sum + counts.high, 0),
-              medium: Object.values(stats).reduce((sum, counts) => sum + counts.medium, 0),
-              low: Object.values(stats).reduce((sum, counts) => sum + counts.low, 0)
-            };
-            markdown += `| **Total** | **${totals.critical}** | **${totals.high}** | **${totals.medium}** | **${totals.low}** |\n\n`;
-            
-            fs.writeFileSync('security-dashboard.md', markdown);
-            console.log('Security scan statistics:', stats);
+        run: |
+          echo "# Security Scan Results" > security-dashboard.md
+          echo "## Summary of Findings" >> security-dashboard.md
+          
+          # Process ZAP results
+          if [ -f "security-reports/zap-report.json" ]; then
+            echo "### ZAP Scan Results" >> security-dashboard.md
+            jq -r '.site[0].alerts[] | "- " + .name + " (Risk: " + .risk + ")"' security-reports/zap-report.json >> security-dashboard.md
+          fi
+          
+          # Process Nuclei results
+          if [ -f "security-reports/nuclei-output.txt" ]; then
+            echo "### Nuclei Scan Results" >> security-dashboard.md
+            echo "\`\`\`" >> security-dashboard.md
+            cat security-reports/nuclei-output.txt >> security-dashboard.md
+            echo "\`\`\`" >> security-dashboard.md
+          fi
+          
+          # Process Trivy results
+          if [ -f "security-reports/trivy-frontend-image-report.json" ]; then
+            echo "### Trivy Frontend Image Scan Results" >> security-dashboard.md
+            jq -r '.Results[] | select(.Vulnerabilities) | .Vulnerabilities[] | select(.Severity == "CRITICAL" or .Severity == "HIGH") | "- " + .VulnerabilityID + " (" + .Severity + "): " + .Title' security-reports/trivy-frontend-image-report.json >> security-dashboard.md
+          fi
 
       - name: Upload Security Dashboard
         uses: actions/upload-artifact@v4
@@ -659,4 +588,9 @@ jobs:
           path: security-dashboard.md
           retention-days: 30
 
-
+      - name: Notify on Critical Findings
+        if: failure()
+        run: |
+          echo "Critical security issues found in the scan!"
+          echo "Please review the security dashboard for details."
+          exit 1
