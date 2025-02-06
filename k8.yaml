@@ -1,3 +1,252 @@
+# # # # apiVersion: v1
+# # # # kind: Secret
+# # # # metadata:
+# # # #   name: mongodb-secret
+# # # # type: Opaque
+# # # # stringData:
+# # # #   MONGO_URL: mongodb+srv://JAYACHANDRAN:KQJrxDn44181NsqT@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+
+# # # # ---
+# # # # apiVersion: v1
+# # # # kind: ConfigMap
+# # # # metadata:
+# # # #   name: mongodb-configmap
+# # # # data:
+# # # #   MONGODB_INITDB_DATABASE: "imdb"
+
+# # # # ---
+# # # # apiVersion: storage.k8s.io/v1
+# # # # kind: StorageClass
+# # # # metadata:
+# # # #   name: mongodb-sc
+# # # # provisioner: kubernetes.io/gce-pd
+# # # # parameters:
+# # # #   type: pd-ssd
+
+# # # # ---
+# # # # apiVersion: apps/v1
+# # # # kind: StatefulSet
+# # # # metadata:
+# # # #   name: mongodb
+# # # # spec:
+# # # #   serviceName: mongodb-service
+# # # #   replicas: 2
+# # # #   selector:
+# # # #     matchLabels:
+# # # #       app: mongodb
+# # # #   template:
+# # # #     metadata:
+# # # #       labels:
+# # # #         app: mongodb
+# # # #     spec:
+# # # #       securityContext:
+# # # #         fsGroup: 999
+# # # #         runAsUser: 999
+# # # #         runAsNonRoot: true
+# # # #       containers:
+# # # #       - name: mongodb
+# # # #         image: mongo:6.0
+# # # #         ports:
+# # # #         - containerPort: 27017
+# # # #         env:
+# # # #         - name: MONGO_INITDB_DATABASE
+# # # #           valueFrom:
+# # # #             configMapKeyRef:
+# # # #               name: mongodb-configmap
+# # # #               key: MONGODB_INITDB_DATABASE
+# # # #         resources:
+# # # #           requests:
+# # # #             memory: "512Mi"
+# # # #             cpu: "250m"
+# # # #           limits:
+# # # #             memory: "1Gi"
+# # # #             cpu: "500m"
+# # # #         volumeMounts:
+# # # #         - name: mongodb-data
+# # # #           mountPath: /data/db
+# # # #         - name: mongodb-tmp
+# # # #           mountPath: /tmp
+# # # #       volumes:
+# # # #       - name: mongodb-tmp
+# # # #         emptyDir: {}
+# # # #   volumeClaimTemplates:
+# # # #   - metadata:
+# # # #       name: mongodb-data
+# # # #     spec:
+# # # #       accessModes: [ "ReadWriteOnce" ]
+# # # #       storageClassName: mongodb-sc
+# # # #       resources:
+# # # #         requests:
+# # # #           storage: 1Gi
+
+# # # # ---
+# # # # apiVersion: v1
+# # # # kind: Service
+# # # # metadata:
+# # # #   name: mongodb-service
+# # # # spec:
+# # # #   type: ClusterIP
+# # # #   ports:
+# # # #   - port: 27017
+# # # #     targetPort: 27017
+# # # #   selector:
+# # # #     app: mongodb
+
+# # # # ---
+# # # # apiVersion: apps/v1
+# # # # kind: Deployment
+# # # # metadata:
+# # # #   name: backend-deployment
+# # # # spec:
+# # # #   replicas: 2
+# # # #   selector:
+# # # #     matchLabels:
+# # # #       app: backend
+# # # #   template:
+# # # #     metadata:
+# # # #       labels:
+# # # #         app: backend
+# # # #     spec:
+# # # #       containers:
+# # # #       - name: backend
+# # # #         image: jai3747/imdb-clone-backend:latest
+# # # #         imagePullPolicy: Always
+# # # #         ports:
+# # # #         - containerPort: 5000
+# # # #         env:
+# # # #         - name: PORT
+# # # #           value: "5000"
+# # # #         - name: NODE_ENV
+# # # #           value: "production"
+# # # #         - name: MONGO_URL
+# # # #           valueFrom:
+# # # #             secretKeyRef:
+# # # #               name: mongodb-secret
+# # # #               key: MONGO_URL
+# # # #         readinessProbe:
+# # # #           httpGet:
+# # # #             path: /api/health
+# # # #             port: 5000
+# # # #           initialDelaySeconds: 30
+# # # #           periodSeconds: 10
+# # # #           timeoutSeconds: 1
+# # # #           failureThreshold: 3
+# # # #         livenessProbe:
+# # # #           httpGet:
+# # # #             path: /api/health
+# # # #             port: 5000
+# # # #           initialDelaySeconds: 60
+# # # #           periodSeconds: 20
+# # # #           timeoutSeconds: 1
+# # # #           failureThreshold: 3
+# # # #         resources:
+# # # #           requests:
+# # # #             memory: "256Mi"
+# # # #             cpu: "100m"
+# # # #           limits:
+# # # #             memory: "512Mi"
+# # # #             cpu: "200m"
+# # # #         volumeMounts:
+# # # #         - name: tmp
+# # # #           mountPath: /tmp
+# # # #       volumes:
+# # # #       - name: tmp
+# # # #         emptyDir: {}
+
+# # # # ---
+# # # # apiVersion: v1
+# # # # kind: Service
+# # # # metadata:
+# # # #   name: backend-service
+# # # # spec:
+# # # #   type: LoadBalancer
+# # # #   ports:
+# # # #   - port: 5000
+# # # #     targetPort: 5000
+# # # #   selector:
+# # # #     app: backend
+
+# # # # ---
+# # # # apiVersion: apps/v1
+# # # # kind: Deployment
+# # # # metadata:
+# # # #   name: frontend-deployment
+# # # # spec:
+# # # #   replicas: 2
+# # # #   selector:
+# # # #     matchLabels:
+# # # #       app: frontend
+# # # #   template:
+# # # #     metadata:
+# # # #       labels:
+# # # #         app: frontend
+# # # #     spec:
+# # # #       containers:
+# # # #       - name: frontend
+# # # #         image: jai3747/imdb-clone-frontend:latest
+# # # #         imagePullPolicy: Always
+# # # #         ports:
+# # # #         - containerPort: 3000
+# # # #         env:
+# # # #         - name: HOST
+# # # #           value: "0.0.0.0"
+# # # #         - name: PORT
+# # # #           value: "3000"
+# # # #         - name: REACT_APP_BACKEND_API
+# # # #           valueFrom:
+# # # #             configMapKeyRef:
+# # # #               name: frontend-config
+# # # #               key: REACT_APP_BACKEND_API
+# # # #         readinessProbe:
+# # # #           httpGet:
+# # # #             path: /
+# # # #             port: 3000
+# # # #           initialDelaySeconds: 30
+# # # #           periodSeconds: 10
+# # # #           timeoutSeconds: 1
+# # # #           failureThreshold: 3
+# # # #         livenessProbe:
+# # # #           httpGet:
+# # # #             path: /
+# # # #             port: 3000
+# # # #           initialDelaySeconds: 60
+# # # #           periodSeconds: 20
+# # # #           timeoutSeconds: 1
+# # # #           failureThreshold: 3
+# # # #         resources:
+# # # #           requests:
+# # # #             memory: "256Mi"
+# # # #             cpu: "100m"
+# # # #           limits:
+# # # #             memory: "512Mi"
+# # # #             cpu: "200m"
+# # # #         volumeMounts:
+# # # #         - name: tmp
+# # # #           mountPath: /tmp
+# # # #       volumes:
+# # # #       - name: tmp
+# # # #         emptyDir: {}
+
+# # # # ---
+# # # # apiVersion: v1
+# # # # kind: Service
+# # # # metadata:
+# # # #   name: frontend-service
+# # # # spec:
+# # # #   type: LoadBalancer
+# # # #   ports:
+# # # #   - port: 80
+# # # #     targetPort: 3000
+# # # #   selector:
+# # # #     app: frontend
+
+# # # # ---
+# # # # apiVersion: v1
+# # # # kind: ConfigMap
+# # # # metadata:
+# # # #   name: frontend-config
+# # # # data:
+# # # #   REACT_APP_BACKEND_API: "http://backend.awsaparna123.xyz:5000/api"
 # # # apiVersion: v1
 # # # kind: Secret
 # # # metadata:
@@ -13,6 +262,45 @@
 # # #   name: mongodb-configmap
 # # # data:
 # # #   MONGODB_INITDB_DATABASE: "imdb"
+
+# # # ---
+# # # apiVersion: v1
+# # # kind: ConfigMap
+# # # metadata:
+# # #   name: prometheus-config
+# # # data:
+# # #   prometheus.yml: |
+# # #     global:
+# # #       scrape_interval: 15s
+# # #       evaluation_interval: 15s
+# # #     scrape_configs:
+# # #       - job_name: 'kubernetes-service-endpoints'
+# # #         kubernetes_sd_configs:
+# # #           - role: endpoints
+# # #         relabel_configs:
+# # #           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+# # #             action: keep
+# # #             regex: true
+# # #           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_port]
+# # #             action: replace
+# # #             target_label: __metrics_path__
+# # #             regex: (.+)
+# # #       - job_name: 'kubernetes-pods'
+# # #         kubernetes_sd_configs:
+# # #           - role: pod
+# # #         relabel_configs:
+# # #           - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+# # #             action: keep
+# # #             regex: true
+# # #           - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+# # #             action: replace
+# # #             target_label: __metrics_path__
+# # #             regex: (.+)
+# # #           - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+# # #             action: replace
+# # #             regex: ([^:]+)(?::\d+)?;(\d+)
+# # #             replacement: $1:$2
+# # #             target_label: __address__
 
 # # # ---
 # # # apiVersion: storage.k8s.io/v1
@@ -38,6 +326,9 @@
 # # #     metadata:
 # # #       labels:
 # # #         app: mongodb
+# # #       annotations:
+# # #         prometheus.io/scrape: "true"
+# # #         prometheus.io/port: "27017"
 # # #     spec:
 # # #       securityContext:
 # # #         fsGroup: 999
@@ -84,6 +375,9 @@
 # # # kind: Service
 # # # metadata:
 # # #   name: mongodb-service
+# # #   annotations:
+# # #     prometheus.io/scrape: "true"
+# # #     prometheus.io/port: "27017"
 # # # spec:
 # # #   type: ClusterIP
 # # #   ports:
@@ -106,6 +400,10 @@
 # # #     metadata:
 # # #       labels:
 # # #         app: backend
+# # #       annotations:
+# # #         prometheus.io/scrape: "true"
+# # #         prometheus.io/port: "5000"
+# # #         prometheus.io/path: "/metrics"
 # # #     spec:
 # # #       containers:
 # # #       - name: backend
@@ -158,6 +456,9 @@
 # # # kind: Service
 # # # metadata:
 # # #   name: backend-service
+# # #   annotations:
+# # #     prometheus.io/scrape: "true"
+# # #     prometheus.io/port: "5000"
 # # # spec:
 # # #   type: LoadBalancer
 # # #   ports:
@@ -180,6 +481,9 @@
 # # #     metadata:
 # # #       labels:
 # # #         app: frontend
+# # #       annotations:
+# # #         prometheus.io/scrape: "true"
+# # #         prometheus.io/port: "3000"
 # # #     spec:
 # # #       containers:
 # # #       - name: frontend
@@ -232,6 +536,9 @@
 # # # kind: Service
 # # # metadata:
 # # #   name: frontend-service
+# # #   annotations:
+# # #     prometheus.io/scrape: "true"
+# # #     prometheus.io/port: "3000"
 # # # spec:
 # # #   type: LoadBalancer
 # # #   ports:
@@ -247,10 +554,155 @@
 # # #   name: frontend-config
 # # # data:
 # # #   REACT_APP_BACKEND_API: "http://backend.awsaparna123.xyz:5000/api"
+
+# # # ---
+# # # apiVersion: v1
+# # # kind: PersistentVolumeClaim
+# # # metadata:
+# # #   name: prometheus-storage
+# # # spec:
+# # #   accessModes:
+# # #     - ReadWriteOnce
+# # #   resources:
+# # #     requests:
+# # #       storage: 10Gi
+# # #   storageClassName: mongodb-sc
+
+# # # ---
+# # # apiVersion: v1
+# # # kind: PersistentVolumeClaim
+# # # metadata:
+# # #   name: grafana-storage
+# # # spec:
+# # #   accessModes:
+# # #     - ReadWriteOnce
+# # #   resources:
+# # #     requests:
+# # #       storage: 10Gi
+# # #   storageClassName: mongodb-sc
+
+# # # ---
+# # # apiVersion: apps/v1
+# # # kind: Deployment
+# # # metadata:
+# # #   name: prometheus
+# # # spec:
+# # #   replicas: 1
+# # #   selector:
+# # #     matchLabels:
+# # #       app: prometheus
+# # #   template:
+# # #     metadata:
+# # #       labels:
+# # #         app: prometheus
+# # #     spec:
+# # #       containers:
+# # #       - name: prometheus
+# # #         image: prom/prometheus:v2.45.0
+# # #         args:
+# # #           - "--config.file=/etc/prometheus/prometheus.yml"
+# # #           - "--storage.tsdb.path=/prometheus"
+# # #           - "--web.enable-lifecycle"
+# # #         ports:
+# # #         - containerPort: 9090
+# # #         resources:
+# # #           requests:
+# # #             memory: "512Mi"
+# # #             cpu: "250m"
+# # #           limits:
+# # #             memory: "1Gi"
+# # #             cpu: "500m"
+# # #         volumeMounts:
+# # #         - name: prometheus-config
+# # #           mountPath: /etc/prometheus/
+# # #         - name: prometheus-storage
+# # #           mountPath: /prometheus
+# # #       volumes:
+# # #       - name: prometheus-config
+# # #         configMap:
+# # #           name: prometheus-config
+# # #       - name: prometheus-storage
+# # #         persistentVolumeClaim:
+# # #           claimName: prometheus-storage
+
+# # # ---
+# # # apiVersion: v1
+# # # kind: Service
+# # # metadata:
+# # #   name: prometheus-service
+# # # spec:
+# # #   selector:
+# # #     app: prometheus
+# # #   ports:
+# # #   - port: 9090
+# # #     targetPort: 9090
+# # #   type: ClusterIP
+
+# # # ---
+# # # apiVersion: apps/v1
+# # # kind: Deployment
+# # # metadata:
+# # #   name: grafana
+# # # spec:
+# # #   replicas: 1
+# # #   selector:
+# # #     matchLabels:
+# # #       app: grafana
+# # #   template:
+# # #     metadata:
+# # #       labels:
+# # #         app: grafana
+# # #     spec:
+# # #       containers:
+# # #       - name: grafana
+# # #         image: grafana/grafana:10.0.0
+# # #         ports:
+# # #         - containerPort: 3000
+# # #         env:
+# # #         - name: GF_SECURITY_ADMIN_PASSWORD
+# # #           value: "admin123"
+# # #         - name: GF_SECURITY_ADMIN_USER
+# # #           value: "admin"
+# # #         - name: GF_SERVER_ROOT_URL
+# # #           value: "http://grafana.awsaparna123.xyz"
+# # #         resources:
+# # #           requests:
+# # #             memory: "256Mi"
+# # #             cpu: "100m"
+# # #           limits:
+# # #             memory: "512Mi"
+# # #             cpu: "200m"
+# # #         volumeMounts:
+# # #         - name: grafana-storage
+# # #           mountPath: /var/lib/grafana
+# # #       volumes:
+# # #       - name: grafana-storage
+# # #         persistentVolumeClaim:
+# # #           claimName: grafana-storage
+
+# # # ---
+# # # apiVersion: v1
+# # # kind: Service
+# # # metadata:
+# # #   name: grafana-service
+# # # spec:
+# # #   selector:
+# # #     app: grafana
+# # #   ports:
+# # #   - port: 3000
+# # #     targetPort: 3000
+# # #   type: LoadBalancer
+# # apiVersion: v1
+# # kind: Namespace
+# # metadata:
+# #   name: backend
+
+# # ---
 # # apiVersion: v1
 # # kind: Secret
 # # metadata:
 # #   name: mongodb-secret
+# #   namespace: backend
 # # type: Opaque
 # # stringData:
 # #   MONGO_URL: mongodb+srv://JAYACHANDRAN:KQJrxDn44181NsqT@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
@@ -260,6 +712,7 @@
 # # kind: ConfigMap
 # # metadata:
 # #   name: mongodb-configmap
+# #   namespace: backend
 # # data:
 # #   MONGODB_INITDB_DATABASE: "imdb"
 
@@ -267,7 +720,17 @@
 # # apiVersion: v1
 # # kind: ConfigMap
 # # metadata:
+# #   name: frontend-config
+# #   namespace: backend
+# # data:
+# #   REACT_APP_BACKEND_API: "http://backend.awsaparna123.xyz:5000/api"
+
+# # ---
+# # apiVersion: v1
+# # kind: ConfigMap
+# # metadata:
 # #   name: prometheus-config
+# #   namespace: backend
 # # data:
 # #   prometheus.yml: |
 # #     global:
@@ -306,19 +769,22 @@
 # # apiVersion: storage.k8s.io/v1
 # # kind: StorageClass
 # # metadata:
-# #   name: mongodb-sc
+# #   name: standard-rwo
+# #   namespace: backend
 # # provisioner: kubernetes.io/gce-pd
 # # parameters:
-# #   type: pd-ssd
+# #   type: pd-standard
+# # volumeBindingMode: WaitForFirstConsumer
 
 # # ---
 # # apiVersion: apps/v1
 # # kind: StatefulSet
 # # metadata:
 # #   name: mongodb
+# #   namespace: backend
 # # spec:
 # #   serviceName: mongodb-service
-# #   replicas: 2
+# #   replicas: 1
 # #   selector:
 # #     matchLabels:
 # #       app: mongodb
@@ -365,7 +831,7 @@
 # #       name: mongodb-data
 # #     spec:
 # #       accessModes: [ "ReadWriteOnce" ]
-# #       storageClassName: mongodb-sc
+# #       storageClassName: standard-rwo
 # #       resources:
 # #         requests:
 # #           storage: 1Gi
@@ -375,6 +841,7 @@
 # # kind: Service
 # # metadata:
 # #   name: mongodb-service
+# #   namespace: backend
 # #   annotations:
 # #     prometheus.io/scrape: "true"
 # #     prometheus.io/port: "27017"
@@ -391,8 +858,9 @@
 # # kind: Deployment
 # # metadata:
 # #   name: backend-deployment
+# #   namespace: backend
 # # spec:
-# #   replicas: 2
+# #   replicas: 1
 # #   selector:
 # #     matchLabels:
 # #       app: backend
@@ -427,7 +895,7 @@
 # #             port: 5000
 # #           initialDelaySeconds: 30
 # #           periodSeconds: 10
-# #           timeoutSeconds: 1
+# #           timeoutSeconds: 5
 # #           failureThreshold: 3
 # #         livenessProbe:
 # #           httpGet:
@@ -435,7 +903,7 @@
 # #             port: 5000
 # #           initialDelaySeconds: 60
 # #           periodSeconds: 20
-# #           timeoutSeconds: 1
+# #           timeoutSeconds: 5
 # #           failureThreshold: 3
 # #         resources:
 # #           requests:
@@ -456,6 +924,7 @@
 # # kind: Service
 # # metadata:
 # #   name: backend-service
+# #   namespace: backend
 # #   annotations:
 # #     prometheus.io/scrape: "true"
 # #     prometheus.io/port: "5000"
@@ -472,8 +941,9 @@
 # # kind: Deployment
 # # metadata:
 # #   name: frontend-deployment
+# #   namespace: backend
 # # spec:
-# #   replicas: 2
+# #   replicas: 1
 # #   selector:
 # #     matchLabels:
 # #       app: frontend
@@ -507,7 +977,7 @@
 # #             port: 3000
 # #           initialDelaySeconds: 30
 # #           periodSeconds: 10
-# #           timeoutSeconds: 1
+# #           timeoutSeconds: 5
 # #           failureThreshold: 3
 # #         livenessProbe:
 # #           httpGet:
@@ -515,7 +985,7 @@
 # #             port: 3000
 # #           initialDelaySeconds: 60
 # #           periodSeconds: 20
-# #           timeoutSeconds: 1
+# #           timeoutSeconds: 5
 # #           failureThreshold: 3
 # #         resources:
 # #           requests:
@@ -536,6 +1006,7 @@
 # # kind: Service
 # # metadata:
 # #   name: frontend-service
+# #   namespace: backend
 # #   annotations:
 # #     prometheus.io/scrape: "true"
 # #     prometheus.io/port: "3000"
@@ -549,43 +1020,38 @@
 
 # # ---
 # # apiVersion: v1
-# # kind: ConfigMap
-# # metadata:
-# #   name: frontend-config
-# # data:
-# #   REACT_APP_BACKEND_API: "http://backend.awsaparna123.xyz:5000/api"
-
-# # ---
-# # apiVersion: v1
 # # kind: PersistentVolumeClaim
 # # metadata:
 # #   name: prometheus-storage
+# #   namespace: backend
 # # spec:
 # #   accessModes:
 # #     - ReadWriteOnce
 # #   resources:
 # #     requests:
 # #       storage: 10Gi
-# #   storageClassName: mongodb-sc
+# #   storageClassName: standard-rwo
 
 # # ---
 # # apiVersion: v1
 # # kind: PersistentVolumeClaim
 # # metadata:
 # #   name: grafana-storage
+# #   namespace: backend
 # # spec:
 # #   accessModes:
 # #     - ReadWriteOnce
 # #   resources:
 # #     requests:
 # #       storage: 10Gi
-# #   storageClassName: mongodb-sc
+# #   storageClassName: standard-rwo
 
 # # ---
 # # apiVersion: apps/v1
 # # kind: Deployment
 # # metadata:
 # #   name: prometheus
+# #   namespace: backend
 # # spec:
 # #   replicas: 1
 # #   selector:
@@ -607,16 +1073,28 @@
 # #         - containerPort: 9090
 # #         resources:
 # #           requests:
-# #             memory: "512Mi"
-# #             cpu: "250m"
+# #             memory: "256Mi"
+# #             cpu: "200m"
 # #           limits:
-# #             memory: "1Gi"
-# #             cpu: "500m"
+# #             memory: "512Mi"
+# #             cpu: "400m"
 # #         volumeMounts:
 # #         - name: prometheus-config
 # #           mountPath: /etc/prometheus/
 # #         - name: prometheus-storage
 # #           mountPath: /prometheus
+# #         readinessProbe:
+# #           httpGet:
+# #             path: /-/ready
+# #             port: 9090
+# #           initialDelaySeconds: 30
+# #           timeoutSeconds: 5
+# #         livenessProbe:
+# #           httpGet:
+# #             path: /-/healthy
+# #             port: 9090
+# #           initialDelaySeconds: 60
+# #           timeoutSeconds: 5
 # #       volumes:
 # #       - name: prometheus-config
 # #         configMap:
@@ -630,6 +1108,7 @@
 # # kind: Service
 # # metadata:
 # #   name: prometheus-service
+# #   namespace: backend
 # # spec:
 # #   selector:
 # #     app: prometheus
@@ -643,6 +1122,7 @@
 # # kind: Deployment
 # # metadata:
 # #   name: grafana
+# #   namespace: backend
 # # spec:
 # #   replicas: 1
 # #   selector:
@@ -653,6 +1133,10 @@
 # #       labels:
 # #         app: grafana
 # #     spec:
+# #       securityContext:
+# #         fsGroup: 472
+# #         supplementalGroups:
+# #           - 0
 # #       containers:
 # #       - name: grafana
 # #         image: grafana/grafana:10.0.0
@@ -665,6 +1149,8 @@
 # #           value: "admin"
 # #         - name: GF_SERVER_ROOT_URL
 # #           value: "http://grafana.awsaparna123.xyz"
+# #         - name: GF_INSTALL_PLUGINS
+# #           value: "grafana-clock-panel,grafana-simple-json-datasource"
 # #         resources:
 # #           requests:
 # #             memory: "256Mi"
@@ -675,6 +1161,18 @@
 # #         volumeMounts:
 # #         - name: grafana-storage
 # #           mountPath: /var/lib/grafana
+# #         readinessProbe:
+# #           httpGet:
+# #             path: /api/health
+# #             port: 3000
+# #           initialDelaySeconds: 30
+# #           timeoutSeconds: 5
+# #         livenessProbe:
+# #           httpGet:
+# #             path: /api/health
+# #             port: 3000
+# #           initialDelaySeconds: 60
+# #           timeoutSeconds: 5
 # #       volumes:
 # #       - name: grafana-storage
 # #         persistentVolumeClaim:
@@ -685,6 +1183,7 @@
 # # kind: Service
 # # metadata:
 # #   name: grafana-service
+# #   namespace: backend
 # # spec:
 # #   selector:
 # #     app: grafana
@@ -692,12 +1191,14 @@
 # #   - port: 3000
 # #     targetPort: 3000
 # #   type: LoadBalancer
+# # First, create the namespace
 # apiVersion: v1
 # kind: Namespace
 # metadata:
 #   name: backend
 
 # ---
+# # MongoDB Secret
 # apiVersion: v1
 # kind: Secret
 # metadata:
@@ -708,6 +1209,7 @@
 #   MONGO_URL: mongodb+srv://JAYACHANDRAN:KQJrxDn44181NsqT@cluster0.w45he.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 
 # ---
+# # MongoDB ConfigMap
 # apiVersion: v1
 # kind: ConfigMap
 # metadata:
@@ -717,6 +1219,7 @@
 #   MONGODB_INITDB_DATABASE: "imdb"
 
 # ---
+# # Frontend ConfigMap
 # apiVersion: v1
 # kind: ConfigMap
 # metadata:
@@ -726,6 +1229,7 @@
 #   REACT_APP_BACKEND_API: "http://backend.awsaparna123.xyz:5000/api"
 
 # ---
+# # Prometheus ConfigMap
 # apiVersion: v1
 # kind: ConfigMap
 # metadata:
@@ -766,17 +1270,7 @@
 #             target_label: __address__
 
 # ---
-# apiVersion: storage.k8s.io/v1
-# kind: StorageClass
-# metadata:
-#   name: standard-rwo
-#   namespace: backend
-# provisioner: kubernetes.io/gce-pd
-# parameters:
-#   type: pd-standard
-# volumeBindingMode: WaitForFirstConsumer
-
-# ---
+# # MongoDB StatefulSet
 # apiVersion: apps/v1
 # kind: StatefulSet
 # metadata:
@@ -837,6 +1331,7 @@
 #           storage: 1Gi
 
 # ---
+# # MongoDB Service
 # apiVersion: v1
 # kind: Service
 # metadata:
@@ -854,6 +1349,7 @@
 #     app: mongodb
 
 # ---
+# # Backend Deployment
 # apiVersion: apps/v1
 # kind: Deployment
 # metadata:
@@ -920,6 +1416,7 @@
 #         emptyDir: {}
 
 # ---
+# # Backend Service
 # apiVersion: v1
 # kind: Service
 # metadata:
@@ -937,6 +1434,7 @@
 #     app: backend
 
 # ---
+# # Frontend Deployment
 # apiVersion: apps/v1
 # kind: Deployment
 # metadata:
@@ -1002,6 +1500,7 @@
 #         emptyDir: {}
 
 # ---
+# # Frontend Service
 # apiVersion: v1
 # kind: Service
 # metadata:
@@ -1019,6 +1518,7 @@
 #     app: frontend
 
 # ---
+# # Prometheus PVC
 # apiVersion: v1
 # kind: PersistentVolumeClaim
 # metadata:
@@ -1033,6 +1533,7 @@
 #   storageClassName: standard-rwo
 
 # ---
+# # Grafana PVC
 # apiVersion: v1
 # kind: PersistentVolumeClaim
 # metadata:
@@ -1047,6 +1548,7 @@
 #   storageClassName: standard-rwo
 
 # ---
+# # Prometheus Deployment
 # apiVersion: apps/v1
 # kind: Deployment
 # metadata:
@@ -1104,6 +1606,7 @@
 #           claimName: prometheus-storage
 
 # ---
+# # Prometheus Service
 # apiVersion: v1
 # kind: Service
 # metadata:
@@ -1118,6 +1621,7 @@
 #   type: ClusterIP
 
 # ---
+# # Grafana Deployment
 # apiVersion: apps/v1
 # kind: Deployment
 # metadata:
@@ -1179,6 +1683,7 @@
 #           claimName: grafana-storage
 
 # ---
+# # Grafana Service
 # apiVersion: v1
 # kind: Service
 # metadata:
@@ -1270,14 +1775,28 @@ data:
             target_label: __address__
 
 ---
-# MongoDB StatefulSet
+# MongoDB PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-data
+  namespace: backend
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard-rwo
+
+---
+# MongoDB Deployment (changed from StatefulSet to avoid update issues)
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: mongodb
   namespace: backend
 spec:
-  serviceName: mongodb-service
   replicas: 1
   selector:
     matchLabels:
@@ -1318,17 +1837,11 @@ spec:
         - name: mongodb-tmp
           mountPath: /tmp
       volumes:
+      - name: mongodb-data
+        persistentVolumeClaim:
+          claimName: mongodb-data
       - name: mongodb-tmp
         emptyDir: {}
-  volumeClaimTemplates:
-  - metadata:
-      name: mongodb-data
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: standard-rwo
-      resources:
-        requests:
-          storage: 1Gi
 
 ---
 # MongoDB Service
