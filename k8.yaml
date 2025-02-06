@@ -3865,8 +3865,7 @@ data:
     auto_assign_org_role = Editor
     
     [alerting]
-    enabled = true
-    execute_alerts = true
+    enabled = false
     
     [unified_alerting]
     enabled = true
@@ -3878,12 +3877,6 @@ data:
     
     [metrics]
     enabled = true
-    basic_auth_username = metrics
-    basic_auth_password = metrics123
-
-    [log]
-    mode = console
-    level = info
     
     [paths]
     data = /var/lib/grafana
