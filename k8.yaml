@@ -3764,7 +3764,7 @@ spec:
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-dashboards
           mountPath: /etc/grafana/provisioning/dashboards
-        - name: grafana-providers
+        - name: grafana-provider
           mountPath: /etc/grafana/provisioning/dashboards/provider.yaml
           subPath: provider.yaml
         - name: grafana-config
@@ -3791,7 +3791,7 @@ spec:
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
-      - name: grafana-providers
+      - name: grafana-provider
         configMap:
           name: grafana-provider
       - name: grafana-dashboards
@@ -3825,16 +3825,16 @@ data:
   provider.yaml: |
     apiVersion: 1
     providers:
-    - name: 'default'
-      orgId: 1
-      folder: ''
-      type: file
-      disableDeletion: false
-      editable: true
-      updateIntervalSeconds: 10
-      allowUiUpdates: true
-      options:
-        path: /etc/grafana/provisioning/dashboards
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards
 ---
 
 apiVersion: v1
