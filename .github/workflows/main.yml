@@ -477,29 +477,29 @@ jobs:
       - name: Deploy Applications
         run: |
           cd backend
-          kubectl apply -f k8.yaml --namespace mongodb
+          
           kubectl apply -f k8.yaml --namespace backend
-          kubectl apply -f k8.yaml --namespace frontend
+          
           
       - name: Wait for Deployments
         run: |
           kubectl rollout status statefulset/mongodb --namespace mongodb --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=mongodb --namespace mongodb --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=mongodb --namespace backend --timeout=5m
           
           kubectl rollout status deployment/backend-deployment --namespace backend --timeout=5m
           kubectl wait --for=condition=ready pod -l app=backend --namespace backend --timeout=5m
           
-          kubectl rollout status deployment/frontend-deployment --namespace frontend --timeout=5m
-          kubectl wait --for=condition=ready pod -l app=frontend --namespace frontend --timeout=5m
+          kubectl rollout status deployment/frontend-deployment --namespace backend --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=frontend --namespace backend --timeout=5m
           
       - name: Verify Deployment
         run: |
-          echo "=== MongoDB Status ==="
-          kubectl get all -n mongodb
+          # echo "=== MongoDB Status ==="
+          # kubectl get all -n mongodb
           echo "=== Backend Status ==="
           kubectl get all -n backend
-          echo "=== Frontend Status ==="
-          kubectl get all -n frontend
+          # echo "=== Frontend Status ==="
+          # kubectl get all -n frontend
 
   # DAST Scanning
   dast-scan:
