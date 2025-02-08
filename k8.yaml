@@ -76,7 +76,7 @@ metadata:
   name: frontend-config
   namespace: backend
 data:
-  REACT_APP_BACKEND_API: http://34.100.247.74:5000/api"
+  REACT_APP_BACKEND_API: http://35.200.248.177:5000/api"
 
 
 ---
