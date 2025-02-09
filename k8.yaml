@@ -80,6 +80,7 @@ data:
 
 
 ---
+# prometheus-config.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -146,8 +147,8 @@ data:
           target_label: kubernetes_pod_name
 
       - job_name: 'kube-state-metrics'
-  static_configs:
-    - targets: ['kube-state-metrics.backend.svc.cluster.local:8080']
+        static_configs:
+          - targets: ['kube-state-metrics.backend.svc.cluster.local:8080']
 
 ---
 apiVersion: v1
@@ -11023,12 +11024,11 @@ metadata:
   name: grafana-datasources
   namespace: backend
 data:
-  datasources.yaml: |
+  prometheus.yaml: |
     apiVersion: 1
     deleteDatasources:
       - name: Prometheus
         orgId: 1
-
     datasources:
       - name: Prometheus
         type: prometheus
